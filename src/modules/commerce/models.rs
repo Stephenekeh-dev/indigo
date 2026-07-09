@@ -3,7 +3,6 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use validator::Validate;
-use bigdecimal::BigDecimal;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Product {
@@ -14,8 +13,8 @@ pub struct Product {
     pub short_desc:    Option<String>,
     pub product_type:  String,
     pub status:        String,
-    pub price_usd:     BigDecimal,
-    pub compare_price: Option<BigDecimal>,
+    pub price_usd:     f64,
+    pub compare_price: Option<f64>,
     pub is_digital:    bool,
     pub download_url:  Option<String>,
     pub thumbnail_url: Option<String>,
@@ -30,7 +29,7 @@ pub struct Order {
     pub id:                Uuid,
     pub user_id:           Uuid,
     pub status:            String,
-    pub total_usd:         BigDecimal,
+    pub total_usd:         f64,
     pub stripe_payment_id: Option<String>,
     pub billing_email:     Option<String>,
     pub created_at:        DateTime<Utc>,
@@ -53,7 +52,7 @@ pub struct CreateProductDto {
     pub description:  String,
     pub short_desc:   Option<String>,
     pub product_type: String,
-    pub price_usd:    BigDecimal,
+    pub price_usd:    f64,
     pub is_digital:   Option<bool>,
     pub tags:         Option<Vec<String>>,
 }

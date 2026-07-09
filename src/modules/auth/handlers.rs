@@ -2,7 +2,7 @@ use axum::{extract::State, Json};
 use chrono::Utc;
 use uuid::Uuid;
 use crate::{
-    AppState,
+    state::AppState,
     errors::{IndigoError, IndigoResult},
     middleware::auth::{Claims, UserRole},
     utils::{
@@ -13,13 +13,10 @@ use crate::{
 };
 use super::models::*;
 
-// ── Register ───────────────────────────────────────────────────
-
 pub async fn register(
     State(state): State<AppState>,
     Json(dto): Json<RegisterDto>,
 ) -> IndigoResult<Json<AuthResponse>> {
-    // Check email not already taken
     let exists = sqlx::query_scalar!(
         "SELECT id FROM users WHERE email = $1",
         dto.email.to_lowercase()
@@ -34,7 +31,6 @@ pub async fn register(
     let id            = Uuid::new_v4();
     let password_hash = hash_password(&dto.password)?;
 
-    // Insert user
     let user = sqlx::query_as!(
         User,
         r#"INSERT INTO users (id, full_name, email, password_hash)
@@ -45,15 +41,11 @@ pub async fn register(
                      avatar_url, bio, github_url, linkedin_url,
                      website_url, timezone, email_verified,
                      created_at, updated_at"#,
-        id,
-        dto.full_name,
-        dto.email.to_lowercase(),
-        password_hash
+        id, dto.full_name, dto.email.to_lowercase(), password_hash
     )
     .fetch_one(&state.db)
     .await?;
 
-    // Create email verification token
     let verify_token = generate_secure_token();
     let expires_at   = Utc::now() + chrono::Duration::hours(24);
     sqlx::query!(
@@ -64,7 +56,6 @@ pub async fn register(
     .execute(&state.db)
     .await?;
 
-    // Send verification email (best-effort)
     let verify_link = format!(
         "{}/auth/verify-email/{}",
         state.config.frontend_url, verify_token
@@ -80,43 +71,30 @@ pub async fn register(
     )
     .await;
 
-    // Generate tokens
     let token = generate_jwt(
-        user.id,
-        &user.email,
-        UserRole::User,
+        user.id, &user.email, UserRole::User,
         &state.config.jwt_secret,
         state.config.jwt_expires_in_hours,
     )?;
-    let refresh_token = generate_secure_token();
-
-    // Store refresh token
+    let refresh_token   = generate_secure_token();
     let refresh_expires = Utc::now()
         + chrono::Duration::days(state.config.jwt_refresh_expires_in_days);
+
     sqlx::query!(
         "INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
          VALUES (uuid_generate_v4(), $1, $2, $3)",
-        user.id,
-        refresh_token,
-        refresh_expires
+        user.id, refresh_token, refresh_expires
     )
     .execute(&state.db)
     .await?;
 
-    Ok(Json(AuthResponse {
-        token,
-        refresh_token,
-        user: user.into(),
-    }))
+    Ok(Json(AuthResponse { token, refresh_token, user: user.into() }))
 }
-
-// ── Login ──────────────────────────────────────────────────────
 
 pub async fn login(
     State(state): State<AppState>,
     Json(dto): Json<LoginDto>,
 ) -> IndigoResult<Json<AuthResponse>> {
-    // Fetch user
     let row = sqlx::query!(
         r#"SELECT id, full_name, email, password_hash,
                   role::text as role, status::text as status,
@@ -128,33 +106,26 @@ pub async fn login(
     .await?
     .ok_or(IndigoError::InvalidCredentials)?;
 
-    // Verify password
     if !verify_password(&dto.password, &row.password_hash)? {
         return Err(IndigoError::InvalidCredentials);
     }
 
-    // Check account status
     if row.status.as_deref() == Some("suspended") {
         return Err(IndigoError::Forbidden);
     }
 
-    // Map role
     let role = match row.role.as_deref() {
         Some("admin")      => UserRole::Admin,
         Some("consultant") => UserRole::Consultant,
         _                  => UserRole::User,
     };
 
-    // Generate JWT
     let token = generate_jwt(
-        row.id,
-        &row.email,
-        role,
+        row.id, &row.email, role,
         &state.config.jwt_secret,
         state.config.jwt_expires_in_hours,
     )?;
 
-    // Generate and store refresh token
     let refresh_token   = generate_secure_token();
     let refresh_expires = Utc::now()
         + chrono::Duration::days(state.config.jwt_refresh_expires_in_days);
@@ -168,7 +139,7 @@ pub async fn login(
 
     Ok(Json(AuthResponse {
         token,
-        refresh_token: refresh_token.clone(),
+        refresh_token,
         user: UserDto {
             id:             row.id,
             full_name:      row.full_name,
@@ -180,8 +151,6 @@ pub async fn login(
         },
     }))
 }
-
-// ── Get current user ───────────────────────────────────────────
 
 pub async fn me(
     claims: Claims,
@@ -205,8 +174,6 @@ pub async fn me(
     Ok(Json(user.into()))
 }
 
-// ── Update profile ─────────────────────────────────────────────
-
 pub async fn update_profile(
     claims: Claims,
     State(state): State<AppState>,
@@ -229,12 +196,8 @@ pub async fn update_profile(
                      avatar_url, bio, github_url, linkedin_url,
                      website_url, timezone, email_verified,
                      created_at, updated_at"#,
-        dto.full_name,
-        dto.bio,
-        dto.github_url,
-        dto.linkedin_url,
-        dto.website_url,
-        dto.timezone,
+        dto.full_name, dto.bio, dto.github_url,
+        dto.linkedin_url, dto.website_url, dto.timezone,
         claims.sub
     )
     .fetch_one(&state.db)
@@ -243,16 +206,13 @@ pub async fn update_profile(
     Ok(Json(user.into()))
 }
 
-// ── Verify email ───────────────────────────────────────────────
-
 pub async fn verify_email(
     State(state): State<AppState>,
     axum::extract::Path(token): axum::extract::Path<String>,
 ) -> IndigoResult<Json<serde_json::Value>> {
     let row = sqlx::query!(
         "SELECT user_id, expires_at, used_at
-         FROM email_verification_tokens
-         WHERE token = $1",
+         FROM email_verification_tokens WHERE token = $1",
         token
     )
     .fetch_optional(&state.db)
@@ -266,7 +226,6 @@ pub async fn verify_email(
         return Err(IndigoError::Validation("Token expired".into()));
     }
 
-    // Mark token used and verify user
     sqlx::query!(
         "UPDATE email_verification_tokens SET used_at = NOW() WHERE token = $1",
         token
@@ -284,13 +243,10 @@ pub async fn verify_email(
     Ok(Json(serde_json::json!({ "message": "Email verified successfully" })))
 }
 
-// ── Forgot password ────────────────────────────────────────────
-
 pub async fn forgot_password(
     State(state): State<AppState>,
     Json(dto): Json<ForgotPasswordDto>,
 ) -> IndigoResult<Json<serde_json::Value>> {
-    // Always return success to prevent email enumeration
     let user = sqlx::query!(
         "SELECT id, full_name FROM users WHERE email = $1",
         dto.email.to_lowercase()
@@ -330,8 +286,6 @@ pub async fn forgot_password(
     })))
 }
 
-// ── Reset password ─────────────────────────────────────────────
-
 pub async fn reset_password(
     State(state): State<AppState>,
     Json(dto): Json<ResetPasswordDto>,
@@ -353,7 +307,6 @@ pub async fn reset_password(
     }
 
     let new_hash = hash_password(&dto.password)?;
-
     sqlx::query!(
         "UPDATE users SET password_hash = $1 WHERE id = $2",
         new_hash, row.user_id
@@ -370,8 +323,6 @@ pub async fn reset_password(
 
     Ok(Json(serde_json::json!({ "message": "Password reset successfully" })))
 }
-
-// ── Logout ─────────────────────────────────────────────────────
 
 pub async fn logout(
     State(state): State<AppState>,

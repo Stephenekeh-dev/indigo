@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
-use bigdecimal::BigDecimal;
 use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -13,8 +12,8 @@ pub struct ServiceListing {
     pub description:    String,
     pub short_desc:     Option<String>,
     pub service_type:   String,
-    pub price_usd:      BigDecimal,
-    pub duration_hours: Option<BigDecimal>,
+    pub price_usd:      f64,
+    pub duration_hours: Option<f64>,
     pub is_active:      bool,
     pub sort_order:     i32,
     pub created_at:     DateTime<Utc>,
@@ -34,7 +33,7 @@ pub struct Booking {
     pub zoom_start_url:    Option<String>,
     pub client_notes:      Option<String>,
     pub consultant_notes:  Option<String>,
-    pub amount_paid_usd:   Option<BigDecimal>,
+    pub amount_paid_usd:   Option<f64>,
     pub stripe_payment_id: Option<String>,
     pub created_at:        DateTime<Utc>,
     pub updated_at:        DateTime<Utc>,
@@ -48,7 +47,7 @@ pub struct ClientProject {
     pub description:  Option<String>,
     pub service_type: String,
     pub status:       String,
-    pub budget_usd:   Option<BigDecimal>,
+    pub budget_usd:   Option<f64>,
     pub created_at:   DateTime<Utc>,
     pub updated_at:   DateTime<Utc>,
 }

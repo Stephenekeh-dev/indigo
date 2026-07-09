@@ -3,7 +3,6 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use validator::Validate;
-use bigdecimal::BigDecimal;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Event {
@@ -15,7 +14,7 @@ pub struct Event {
     pub status:           String,
     pub is_online:        bool,
     pub is_free:          bool,
-    pub price_usd:        Option<BigDecimal>,
+    pub price_usd:        Option<f64>,
     pub max_attendees:    Option<i32>,
     pub scheduled_at:     DateTime<Utc>,
     pub duration_minutes: i32,
@@ -47,7 +46,7 @@ pub struct CreateEventDto {
     pub scheduled_at:     DateTime<Utc>,
     pub duration_minutes: i32,
     pub is_free:          Option<bool>,
-    pub price_usd:        Option<BigDecimal>,
+    pub price_usd:        Option<f64>,
     pub max_attendees:    Option<i32>,
     pub timezone:         Option<String>,
 }

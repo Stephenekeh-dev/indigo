@@ -1,7 +1,7 @@
 use axum::{extract::{State, Path}, Json};
 use uuid::Uuid;
 use crate::{
-    AppState,
+    state::AppState,
     errors::{IndigoError, IndigoResult},
     middleware::auth::Claims,
     utils::slug::unique_slug,
@@ -16,7 +16,8 @@ pub async fn list_events(
         r#"SELECT id, title, slug, description,
                   event_type::text as "event_type!",
                   status::text as "status!",
-                  is_online, is_free, price_usd::float8,
+                  is_online, is_free,
+                  price_usd::float8 as price_usd,
                   max_attendees, scheduled_at, duration_minutes,
                   timezone, zoom_join_url, thumbnail_url, tags,
                   created_at, updated_at
@@ -39,7 +40,8 @@ pub async fn get_event(
         r#"SELECT id, title, slug, description,
                   event_type::text as "event_type!",
                   status::text as "status!",
-                  is_online, is_free, price_usd::float8,
+                  is_online, is_free,
+                  price_usd::float8 as price_usd,
                   max_attendees, scheduled_at, duration_minutes,
                   timezone, zoom_join_url, thumbnail_url, tags,
                   created_at, updated_at
@@ -67,11 +69,12 @@ pub async fn create_event(
               (id, title, slug, description, event_type,
                scheduled_at, duration_minutes, is_free,
                price_usd, max_attendees, timezone)
-           VALUES ($1,$2,$3,$4,$5::event_type,$6,$7,$8,$9,$10,$11)
+           VALUES ($1,$2,$3,$4,$5::text::event_type,$6,$7,$8,$9::float8,$10,$11)
            RETURNING id, title, slug, description,
                      event_type::text as "event_type!",
                      status::text as "status!",
-                     is_online, is_free, price_usd::float8,
+                     is_online, is_free,
+                     price_usd::float8 as price_usd,
                      max_attendees, scheduled_at, duration_minutes,
                      timezone, zoom_join_url, thumbnail_url, tags,
                      created_at, updated_at"#,
@@ -90,14 +93,17 @@ pub async fn register_for_event(
     Json(dto): Json<RegisterEventDto>,
 ) -> IndigoResult<Json<serde_json::Value>> {
     let exists = sqlx::query_scalar!(
-        "SELECT id FROM event_registrations WHERE event_id = $1 AND user_id = $2",
+        "SELECT id FROM event_registrations
+         WHERE event_id = $1 AND user_id = $2",
         dto.event_id, claims.sub
     )
     .fetch_optional(&state.db)
     .await?;
 
     if exists.is_some() {
-        return Err(IndigoError::Conflict("Already registered for this event".into()));
+        return Err(IndigoError::Conflict(
+            "Already registered for this event".into()
+        ));
     }
 
     sqlx::query!(
@@ -108,7 +114,9 @@ pub async fn register_for_event(
     .execute(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "message": "Successfully registered for event" })))
+    Ok(Json(serde_json::json!({
+        "message": "Successfully registered for event"
+    })))
 }
 
 pub async fn my_membership(

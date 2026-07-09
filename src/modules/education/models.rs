@@ -3,7 +3,6 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use validator::Validate;
-use bigdecimal::BigDecimal;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Course {
@@ -14,7 +13,7 @@ pub struct Course {
     pub short_desc:          Option<String>,
     pub level:               String,
     pub status:              String,
-    pub price_usd:           BigDecimal,
+    pub price_usd:           f64,
     pub thumbnail_url:       Option<String>,
     pub intro_video_url:     Option<String>,
     pub total_duration_mins: i32,
@@ -49,8 +48,8 @@ pub struct Enrollment {
     pub user_id:         Uuid,
     pub course_id:       Uuid,
     pub status:          String,
-    pub progress_pct:    BigDecimal,
-    pub amount_paid_usd: Option<BigDecimal>,
+    pub progress_pct:    f64,
+    pub amount_paid_usd: Option<f64>,
     pub enrolled_at:     DateTime<Utc>,
     pub completed_at:    Option<DateTime<Utc>>,
 }
@@ -61,7 +60,7 @@ pub struct CreateCourseDto {
     pub title:       String,
     pub description: String,
     pub level:       String,
-    pub price_usd:   BigDecimal,
+    pub price_usd:   f64,
     pub is_free:     Option<bool>,
     pub tags:        Option<Vec<String>>,
 }

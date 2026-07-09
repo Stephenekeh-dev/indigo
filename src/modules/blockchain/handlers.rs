@@ -1,7 +1,7 @@
 use axum::{extract::{State, Path}, Json};
 use uuid::Uuid;
 use crate::{
-    AppState,
+    state::AppState,
     errors::{IndigoError, IndigoResult},
     middleware::auth::Claims,
     utils::slug::unique_slug,
@@ -16,8 +16,8 @@ pub async fn list_services(
         r#"SELECT id, title, slug, description,
                   network::text as "network!",
                   project_type::text as "project_type!",
-                  price_from_usd::float8, is_active,
-                  created_at, updated_at
+                  price_from_usd::float8 as price_from_usd,
+                  is_active, created_at, updated_at
            FROM blockchain_services
            WHERE is_active = true
            ORDER BY created_at DESC"#
@@ -36,8 +36,8 @@ pub async fn get_service(
         r#"SELECT id, title, slug, description,
                   network::text as "network!",
                   project_type::text as "project_type!",
-                  price_from_usd::float8, is_active,
-                  created_at, updated_at
+                  price_from_usd::float8 as price_from_usd,
+                  is_active, created_at, updated_at
            FROM blockchain_services WHERE slug = $1"#,
         slug
     )
@@ -53,9 +53,12 @@ pub async fn submit_inquiry(
 ) -> IndigoResult<Json<serde_json::Value>> {
     sqlx::query!(
         r#"INSERT INTO blockchain_inquiries
-              (id, name, email, company, network, project_type, description, budget_range)
+              (id, name, email, company, network,
+               project_type, description, budget_range)
            VALUES (uuid_generate_v4(),$1,$2,$3,
-                   $4::blockchain_network,$5::blockchain_project_type,$6,$7)"#,
+                   $4::text::blockchain_network,
+                   $5::text::blockchain_project_type,
+                   $6,$7)"#,
         dto.name, dto.email, dto.company,
         dto.network.as_deref(),
         dto.project_type.as_deref(),
@@ -78,12 +81,13 @@ pub async fn create_project(
         BlockchainProject,
         r#"INSERT INTO blockchain_projects
               (id, client_id, title, description, network, project_type, budget_usd)
-           VALUES ($1,$2,$3,$4,$5::blockchain_network,$6::blockchain_project_type,$7)
+           VALUES ($1,$2,$3,$4,$5::text::blockchain_network,$6::text::blockchain_project_type,$7::float8)
            RETURNING id, client_id, title, description,
                      network::text as "network!",
                      project_type::text as "project_type!",
                      status::text as "status!",
-                     budget_usd::float8, created_at, updated_at"#,
+                     budget_usd::float8 as budget_usd,
+                     created_at, updated_at"#,
         id, claims.sub, dto.title, dto.description,
         dto.network, dto.project_type, dto.budget_usd
     )
@@ -102,7 +106,8 @@ pub async fn my_projects(
                   network::text as "network!",
                   project_type::text as "project_type!",
                   status::text as "status!",
-                  budget_usd::float8, created_at, updated_at
+                  budget_usd::float8 as budget_usd,
+                  created_at, updated_at
            FROM blockchain_projects
            WHERE client_id = $1
            ORDER BY created_at DESC"#,

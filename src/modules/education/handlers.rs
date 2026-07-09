@@ -2,7 +2,7 @@ use axum::{extract::{State, Path, Query}, Json};
 use serde::Deserialize;
 use uuid::Uuid;
 use crate::{
-    AppState,
+    state::AppState,
     errors::{IndigoError, IndigoResult},
     middleware::auth::Claims,
     utils::slug::unique_slug,
@@ -25,10 +25,12 @@ pub async fn list_courses(
     let rows = sqlx::query_as!(
         Course,
         r#"SELECT id, title, slug, description, short_desc,
-                  level::text as "level!", status::text as "status!",
+                  level::text as "level!",
+                  status::text as "status!",
                   price_usd::float8 as "price_usd!",
                   thumbnail_url, intro_video_url,
-                  total_duration_mins, total_lessons, is_free, tags,
+                  total_duration_mins, total_lessons, is_free, 
+                   tags,
                   published_at, created_at, updated_at
            FROM courses
            WHERE status = 'published'
@@ -48,10 +50,12 @@ pub async fn get_course(
     sqlx::query_as!(
         Course,
         r#"SELECT id, title, slug, description, short_desc,
-                  level::text as "level!", status::text as "status!",
+                  level::text as "level!",
+                  status::text as "status!",
                   price_usd::float8 as "price_usd!",
                   thumbnail_url, intro_video_url,
-                  total_duration_mins, total_lessons, is_free, tags,
+                  total_duration_mins, total_lessons, is_free, 
+                  tags,
                   published_at, created_at, updated_at
            FROM courses
            WHERE slug = $1 AND status = 'published'"#,
@@ -76,12 +80,14 @@ pub async fn create_course(
         Course,
         r#"INSERT INTO courses
               (id, title, slug, description, level, price_usd, is_free, tags)
-           VALUES ($1,$2,$3,$4,$5::course_level,$6,$7,$8)
+           VALUES ($1,$2,$3,$4,$5::text::course_level,$6::float8,$7,$8)
            RETURNING id, title, slug, description, short_desc,
-                     level::text as "level!", status::text as "status!",
+                     level::text as "level!",
+                     status::text as "status!",
                      price_usd::float8 as "price_usd!",
                      thumbnail_url, intro_video_url,
                      total_duration_mins, total_lessons, is_free, tags,
+                      
                      published_at, created_at, updated_at"#,
         id, dto.title, slug, dto.description, dto.level,
         dto.price_usd, is_free, &tags
@@ -115,7 +121,7 @@ pub async fn enroll(
            RETURNING id, user_id, course_id,
                      status::text as "status!",
                      progress_pct::float8 as "progress_pct!",
-                     amount_paid_usd::float8,
+                     amount_paid_usd::float8 as amount_paid_usd,
                      enrolled_at, completed_at"#,
         id, claims.sub, dto.course_id, dto.stripe_payment_id
     )
@@ -133,7 +139,7 @@ pub async fn my_enrollments(
         r#"SELECT id, user_id, course_id,
                   status::text as "status!",
                   progress_pct::float8 as "progress_pct!",
-                  amount_paid_usd::float8,
+                  amount_paid_usd::float8 as amount_paid_usd,
                   enrolled_at, completed_at
            FROM enrollments
            WHERE user_id = $1
@@ -156,9 +162,9 @@ pub async fn update_progress(
            SELECT uuid_generate_v4(), $1, $2, course_id, $3, $4
            FROM lessons WHERE id = $2
            ON CONFLICT (user_id, lesson_id) DO UPDATE
-           SET completed = EXCLUDED.completed,
+           SET completed     = EXCLUDED.completed,
                watch_seconds = EXCLUDED.watch_seconds,
-               updated_at = NOW()"#,
+               updated_at    = NOW()"#,
         claims.sub, dto.lesson_id, dto.completed,
         dto.watch_seconds.unwrap_or(0)
     )

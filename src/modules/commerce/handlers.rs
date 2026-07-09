@@ -1,7 +1,7 @@
 use axum::{extract::{State, Path}, Json};
 use uuid::Uuid;
 use crate::{
-    AppState,
+    state::AppState,
     errors::{IndigoError, IndigoResult},
     middleware::auth::Claims,
     utils::slug::unique_slug,
@@ -17,9 +17,9 @@ pub async fn list_products(
                   product_type::text as "product_type!",
                   status::text as "status!",
                   price_usd::float8 as "price_usd!",
-                  compare_price::float8, is_digital,
-                  download_url, thumbnail_url, tags, stock_count,
-                  created_at, updated_at
+                  compare_price::float8 as compare_price,
+                  is_digital, download_url, thumbnail_url,
+                  tags, stock_count, created_at, updated_at
            FROM products
            WHERE status = 'active'
            ORDER BY sort_order ASC"#
@@ -39,10 +39,11 @@ pub async fn get_product(
                   product_type::text as "product_type!",
                   status::text as "status!",
                   price_usd::float8 as "price_usd!",
-                  compare_price::float8, is_digital,
-                  download_url, thumbnail_url, tags, stock_count,
-                  created_at, updated_at
-           FROM products WHERE slug = $1 AND status = 'active'"#,
+                  compare_price::float8 as compare_price,
+                  is_digital, download_url, thumbnail_url,
+                  tags, stock_count, created_at, updated_at
+           FROM products
+           WHERE slug = $1 AND status = 'active'"#,
         slug
     )
     .fetch_optional(&state.db)
@@ -65,14 +66,14 @@ pub async fn create_product(
         r#"INSERT INTO products
               (id, title, slug, description, short_desc,
                product_type, price_usd, is_digital, tags)
-           VALUES ($1,$2,$3,$4,$5,$6::product_type,$7,$8,$9)
+           VALUES ($1,$2,$3,$4,$5,$6::text::product_type,$7::float8,$8,$9)
            RETURNING id, title, slug, description, short_desc,
                      product_type::text as "product_type!",
                      status::text as "status!",
                      price_usd::float8 as "price_usd!",
-                     compare_price::float8, is_digital,
-                     download_url, thumbnail_url, tags, stock_count,
-                     created_at, updated_at"#,
+                     compare_price::float8 as compare_price,
+                     is_digital, download_url, thumbnail_url,
+                     tags, stock_count, created_at, updated_at"#,
         id, dto.title, slug, dto.description, dto.short_desc,
         dto.product_type, dto.price_usd, is_digital, &tags
     )
@@ -134,7 +135,8 @@ pub async fn my_orders(
 ) -> IndigoResult<Json<Vec<Order>>> {
     let rows = sqlx::query_as!(
         Order,
-        r#"SELECT id, user_id, status::text as "status!",
+        r#"SELECT id, user_id,
+                  status::text as "status!",
                   total_usd::float8 as "total_usd!",
                   stripe_payment_id, billing_email,
                   created_at, updated_at

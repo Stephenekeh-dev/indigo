@@ -3,7 +3,6 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use validator::Validate;
-use bigdecimal::BigDecimal;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct BlockchainService {
@@ -13,7 +12,7 @@ pub struct BlockchainService {
     pub description:    String,
     pub network:        String,
     pub project_type:   String,
-    pub price_from_usd: Option<BigDecimal>,
+    pub price_from_usd: Option<f64>,
     pub is_active:      bool,
     pub created_at:     DateTime<Utc>,
     pub updated_at:     DateTime<Utc>,
@@ -28,7 +27,7 @@ pub struct BlockchainProject {
     pub network:      String,
     pub project_type: String,
     pub status:       String,
-    pub budget_usd:   Option<BigDecimal>,
+    pub budget_usd:   Option<f64>,
     pub created_at:   DateTime<Utc>,
     pub updated_at:   DateTime<Utc>,
 }
@@ -54,5 +53,5 @@ pub struct CreateProjectDto {
     pub description:  Option<String>,
     pub network:      String,
     pub project_type: String,
-    pub budget_usd:   Option<BigDecimal>,
+    pub budget_usd:   Option<f64>,
 }
