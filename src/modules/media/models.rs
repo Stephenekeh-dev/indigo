@@ -15,7 +15,7 @@ pub struct Post {
     pub status:          String,
     pub category:        String,
     pub cover_image_url: Option<String>,
-    pub tags:            Vec<String>,
+    pub tags:           Option<Vec<String>>,
     pub read_time_mins:  Option<i32>,
     pub view_count:      i32,
     pub likes_count:     i32,

@@ -19,7 +19,7 @@ pub struct Course {
     pub total_duration_mins: i32,
     pub total_lessons:       i32,
     pub is_free:             bool,
-    pub tags:                Vec<String>,
+    pub tags:                Option<Vec<String>>,
     pub published_at:        Option<DateTime<Utc>>,
     pub created_at:          DateTime<Utc>,
     pub updated_at:          DateTime<Utc>,

@@ -51,7 +51,8 @@ pub async fn get_post(
     Path(slug): Path<String>,
 ) -> IndigoResult<Json<Post>> {
     sqlx::query!(
-        "UPDATE posts SET view_count = view_count + 1 WHERE slug = $1", slug
+        "UPDATE posts SET view_count = view_count + 1 WHERE slug = $1",
+        slug
     )
     .execute(&state.db)
     .await

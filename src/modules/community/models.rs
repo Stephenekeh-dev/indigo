@@ -21,7 +21,7 @@ pub struct Event {
     pub timezone:         String,
     pub zoom_join_url:    Option<String>,
     pub thumbnail_url:    Option<String>,
-    pub tags:             Vec<String>,
+   pub tags:              Option<Vec<String>>,
     pub created_at:       DateTime<Utc>,
     pub updated_at:       DateTime<Utc>,
 }

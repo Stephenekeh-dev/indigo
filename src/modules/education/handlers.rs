@@ -29,8 +29,7 @@ pub async fn list_courses(
                   status::text as "status!",
                   price_usd::float8 as "price_usd!",
                   thumbnail_url, intro_video_url,
-                  total_duration_mins, total_lessons, is_free, 
-                   tags,
+                  total_duration_mins, total_lessons, is_free, tags,
                   published_at, created_at, updated_at
            FROM courses
            WHERE status = 'published'
@@ -54,8 +53,7 @@ pub async fn get_course(
                   status::text as "status!",
                   price_usd::float8 as "price_usd!",
                   thumbnail_url, intro_video_url,
-                  total_duration_mins, total_lessons, is_free, 
-                  tags,
+                  total_duration_mins, total_lessons, is_free, tags,
                   published_at, created_at, updated_at
            FROM courses
            WHERE slug = $1 AND status = 'published'"#,
@@ -87,7 +85,6 @@ pub async fn create_course(
                      price_usd::float8 as "price_usd!",
                      thumbnail_url, intro_video_url,
                      total_duration_mins, total_lessons, is_free, tags,
-                      
                      published_at, created_at, updated_at"#,
         id, dto.title, slug, dto.description, dto.level,
         dto.price_usd, is_free, &tags
@@ -110,7 +107,9 @@ pub async fn enroll(
     .await?;
 
     if existing.is_some() {
-        return Err(IndigoError::Conflict("Already enrolled in this course".into()));
+        return Err(IndigoError::Conflict(
+            "Already enrolled in this course".into()
+        ));
     }
 
     let id = Uuid::new_v4();

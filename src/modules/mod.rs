@@ -8,7 +8,7 @@ pub mod media;
 pub mod ai;
 
 use axum::Router;
-use crate::state;
+use crate::state::AppState;
 
 pub fn routes(state: AppState) -> Router {
     Router::new()
@@ -20,5 +20,4 @@ pub fn routes(state: AppState) -> Router {
         .nest("/api/v1/commerce",   commerce::routes(state.clone()))
         .nest("/api/v1/media",      media::routes(state.clone()))
         .nest("/api/v1/ai",         ai::routes(state.clone()))
-        .with_state(state)
 }

@@ -18,7 +18,7 @@ pub struct Product {
     pub is_digital:    bool,
     pub download_url:  Option<String>,
     pub thumbnail_url: Option<String>,
-    pub tags:          Vec<String>,
+    pub tags:          Option<Vec<String>>,
     pub stock_count:   Option<i32>,
     pub created_at:    DateTime<Utc>,
     pub updated_at:    DateTime<Utc>,
