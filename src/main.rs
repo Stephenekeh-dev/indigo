@@ -60,4 +60,8 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
+
+   
 }
+#[cfg(test)]
+mod tests;

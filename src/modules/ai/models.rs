@@ -55,36 +55,36 @@ pub struct MessageResponse {
     pub tokens_used:  i32,
     pub session_token: String,
 }
-
-// ── Claude API types ───────────────────────────────────────────
+// ── OpenAI API types ───────────────────────────────────────────
 
 #[derive(Debug, Serialize)]
-pub struct ClaudeRequest {
-    pub model:      String,
-    pub max_tokens: u32,
-    pub system:     String,
-    pub messages:   Vec<ClaudeMessage>,
+pub struct OpenAiRequest {
+    pub model:       String,
+    pub messages:    Vec<OpenAiMessage>,
+    pub max_tokens:  u32,
+    pub temperature: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ClaudeMessage {
-    pub role:    String,   // "user" | "assistant"
+pub struct OpenAiMessage {
+    pub role:    String,   // "system" | "user" | "assistant"
     pub content: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ClaudeResponse {
-    pub content: Vec<ClaudeContent>,
-    pub usage:   Option<ClaudeUsage>,
+pub struct OpenAiResponse {
+    pub choices: Vec<OpenAiChoice>,
+    pub usage:   Option<OpenAiUsage>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ClaudeContent {
-    pub text: Option<String>,
+pub struct OpenAiChoice {
+    pub message: OpenAiMessage,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ClaudeUsage {
-    pub input_tokens:  i32,
-    pub output_tokens: i32,
+pub struct OpenAiUsage {
+    pub prompt_tokens:     i32,
+    pub completion_tokens: i32,
+    pub total_tokens:      i32,
 }

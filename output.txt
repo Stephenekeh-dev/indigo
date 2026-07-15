@@ -1,0 +1,1062 @@
+    Checking indigo-backend v0.1.0 (C:\Users\User\Desktop\indigo-backend)
+error: proc macro panicked
+  --> src\modules\auth\handlers.rs:20:18
+   |
+20 |       let exists = sqlx::query_scalar!(
+   |  __________________^
+21 | |         "SELECT id FROM users WHERE email = $1",
+22 | |         dto.email.to_lowercase()
+23 | |     )
+   | |_____^
+   |
+   = help: message: failed to load environment from "C:\\Users\\User\\Desktop\\indigo-backend\\.env", Error parsing line: 'gzbs oooi akch phbv', error at line index: 5
+   = note: this error originates in the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\auth\handlers.rs:34:16
+   |
+34 |       let user = sqlx::query_as!(
+   |  ________________^
+35 | |         User,
+36 | |         r#"INSERT INTO users (id, full_name, email, password_hash)
+37 | |            VALUES ($1, $2, $3, $4)
+...  |
+44 | |         id, dto.full_name, dto.email.to_lowercase(), password_hash
+45 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\auth\handlers.rs:51:5
+   |
+51 | /     sqlx::query!(
+52 | |         "INSERT INTO email_verification_tokens (id, user_id, token, expires_at)
+53 | |          VALUES (uuid_generate_v4(), $1, $2, $3)",
+54 | |         id, verify_token, expires_at
+55 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\auth\handlers.rs:83:5
+   |
+83 | /     sqlx::query!(
+84 | |         "INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
+85 | |          VALUES (uuid_generate_v4(), $1, $2, $3)",
+86 | |         user.id, refresh_token, refresh_expires
+87 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:98:15
+    |
+ 98 |       let row = sqlx::query!(
+    |  _______________^
+ 99 | |         r#"SELECT id, full_name, email, password_hash,
+100 | |                   role::text as role, status::text as status,
+101 | |                   avatar_url, email_verified
+102 | |            FROM users WHERE email = $1"#,
+103 | |         dto.email.to_lowercase()
+104 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:132:5
+    |
+132 | /     sqlx::query!(
+133 | |         "INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
+134 | |          VALUES (uuid_generate_v4(), $1, $2, $3)",
+135 | |         row.id, refresh_token, refresh_expires
+136 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:159:16
+    |
+159 |       let user = sqlx::query_as!(
+    |  ________________^
+160 | |         User,
+161 | |         r#"SELECT id, full_name, email,
+162 | |                   role::text as "role!",
+...   |
+168 | |         claims.sub
+169 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:182:16
+    |
+182 |       let user = sqlx::query_as!(
+    |  ________________^
+183 | |         User,
+184 | |         r#"UPDATE users SET
+185 | |                 full_name    = COALESCE($1, full_name),
+...   |
+201 | |         claims.sub
+202 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:213:15
+    |
+213 |       let row = sqlx::query!(
+    |  _______________^
+214 | |         "SELECT user_id, expires_at, used_at
+215 | |          FROM email_verification_tokens WHERE token = $1",
+216 | |         token
+217 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:229:5
+    |
+229 | /     sqlx::query!(
+230 | |         "UPDATE email_verification_tokens SET used_at = NOW() WHERE token = $1",
+231 | |         token
+232 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:236:5
+    |
+236 | /     sqlx::query!(
+237 | |         "UPDATE users SET email_verified = true, status = 'active' WHERE id = $1",
+238 | |         row.user_id
+239 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:250:16
+    |
+250 |       let user = sqlx::query!(
+    |  ________________^
+251 | |         "SELECT id, full_name FROM users WHERE email = $1",
+252 | |         dto.email.to_lowercase()
+253 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:260:9
+    |
+260 | /         sqlx::query!(
+261 | |             "INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
+262 | |              VALUES (uuid_generate_v4(), $1, $2, $3)",
+263 | |             u.id, reset_token, expires_at
+264 | |         )
+    | |_________^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:293:15
+    |
+293 |       let row = sqlx::query!(
+    |  _______________^
+294 | |         "SELECT user_id, expires_at, used_at
+295 | |          FROM password_reset_tokens WHERE token = $1",
+296 | |         dto.token
+297 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:310:5
+    |
+310 | /     sqlx::query!(
+311 | |         "UPDATE users SET password_hash = $1 WHERE id = $2",
+312 | |         new_hash, row.user_id
+313 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:317:5
+    |
+317 | /     sqlx::query!(
+318 | |         "UPDATE password_reset_tokens SET used_at = NOW() WHERE token = $1",
+319 | |         dto.token
+320 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\auth\handlers.rs:332:9
+    |
+332 | /         sqlx::query!(
+333 | |             "UPDATE refresh_tokens SET revoked_at = NOW()
+334 | |              WHERE token_hash = $1 AND revoked_at IS NULL",
+335 | |             refresh_token
+336 | |         )
+    | |_________^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\services\handlers.rs:25:16
+   |
+25 |       let rows = sqlx::query_as!(
+   |  ________________^
+26 | |         ServiceListing,
+27 | |         r#"SELECT id, title, slug, description, short_desc,
+28 | |                   service_type::text as "service_type!",
+...  |
+34 | |            ORDER BY sort_order ASC"#
+35 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\services\handlers.rs:45:5
+   |
+45 | /     sqlx::query_as!(
+46 | |         ServiceListing,
+47 | |         r#"SELECT id, title, slug, description, short_desc,
+48 | |                   service_type::text as "service_type!",
+...  |
+54 | |         slug
+55 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\services\handlers.rs:69:16
+   |
+69 |       let row  = sqlx::query_as!(
+   |  ________________^
+70 | |         ServiceListing,
+71 | |         r#"INSERT INTO service_listings
+72 | |               (id, title, slug, description, short_desc,
+...  |
+81 | |         dto.service_type, dto.price_usd, dto.duration_hours
+82 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\services\handlers.rs:97:22
+    |
+ 97 |       let total: i64 = sqlx::query_scalar!(
+    |  ______________________^
+ 98 | |         "SELECT COUNT(*) FROM bookings WHERE client_id = $1",
+ 99 | |         claims.sub
+100 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\services\handlers.rs:105:16
+    |
+105 |       let rows = sqlx::query_as!(
+    |  ________________^
+106 | |         Booking,
+107 | |         r#"SELECT id, service_id, client_id, scheduled_at,
+108 | |                   duration_minutes, status::text as "status!",
+...   |
+117 | |         claims.sub, limit, offset
+118 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\services\handlers.rs:130:19
+    |
+130 |       let service = sqlx::query!(
+    |  ___________________^
+131 | |         r#"SELECT title,
+132 | |                   duration_hours::float8 as duration_hours,
+133 | |                   price_usd::float8 as "price_usd!"
+...   |
+136 | |         dto.service_id
+137 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\services\handlers.rs:157:19
+    |
+157 |       let booking = sqlx::query_as!(
+    |  ___________________^
+158 | |         Booking,
+159 | |         r#"INSERT INTO bookings
+160 | |               (id, service_id, client_id, scheduled_at, duration_minutes,
+...   |
+173 | |         dto.client_notes
+174 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\services\handlers.rs:178:23
+    |
+178 |       if let Ok(user) = sqlx::query!(
+    |  _______________________^
+179 | |         "SELECT full_name, email FROM users WHERE id = $1", claims.sub
+180 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\services\handlers.rs:207:20
+    |
+207 |       let affected = sqlx::query!(
+    |  ____________________^
+208 | |         "UPDATE bookings SET status = 'cancelled'
+209 | |          WHERE id = $1 AND client_id = $2 AND status = 'pending'",
+210 | |         id, claims.sub
+211 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\services\handlers.rs:226:16
+    |
+226 |       let rows = sqlx::query_as!(
+    |  ________________^
+227 | |         ClientProject,
+228 | |         r#"SELECT id, client_id, title, description,
+229 | |                   service_type::text as "service_type!",
+...   |
+236 | |         claims.sub
+237 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\services\handlers.rs:249:15
+    |
+249 |       let row = sqlx::query_as!(
+    |  _______________^
+250 | |         ClientProject,
+251 | |         r#"INSERT INTO client_projects
+252 | |               (id, client_id, title, description, service_type, budget_usd)
+...   |
+260 | |         dto.service_type, dto.budget_usd
+261 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\education\handlers.rs:25:16
+   |
+25 |       let rows = sqlx::query_as!(
+   |  ________________^
+26 | |         Course,
+27 | |         r#"SELECT id, title, slug, description, short_desc,
+28 | |                   level::text as "level!",
+...  |
+38 | |         limit, offset
+39 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\education\handlers.rs:49:5
+   |
+49 | /     sqlx::query_as!(
+50 | |         Course,
+51 | |         r#"SELECT id, title, slug, description, short_desc,
+52 | |                   level::text as "level!",
+...  |
+60 | |         slug
+61 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\education\handlers.rs:77:15
+   |
+77 |       let row = sqlx::query_as!(
+   |  _______________^
+78 | |         Course,
+79 | |         r#"INSERT INTO courses
+80 | |               (id, title, slug, description, level, price_usd, is_free, tags)
+...  |
+90 | |         dto.price_usd, is_free, &tags
+91 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\education\handlers.rs:102:20
+    |
+102 |       let existing = sqlx::query_scalar!(
+    |  ____________________^
+103 | |         "SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2",
+104 | |         claims.sub, dto.course_id
+105 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\education\handlers.rs:116:15
+    |
+116 |       let row = sqlx::query_as!(
+    |  _______________^
+117 | |         Enrollment,
+118 | |         r#"INSERT INTO enrollments (id, user_id, course_id, stripe_payment_id)
+119 | |            VALUES ($1,$2,$3,$4)
+...   |
+125 | |         id, claims.sub, dto.course_id, dto.stripe_payment_id
+126 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\education\handlers.rs:136:16
+    |
+136 |       let rows = sqlx::query_as!(
+    |  ________________^
+137 | |         Enrollment,
+138 | |         r#"SELECT id, user_id, course_id,
+139 | |                   status::text as "status!",
+...   |
+146 | |         claims.sub
+147 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\education\handlers.rs:158:5
+    |
+158 | /     sqlx::query!(
+159 | |         r#"INSERT INTO lesson_progress
+160 | |               (id, user_id, lesson_id, course_id, completed, watch_seconds)
+161 | |            SELECT uuid_generate_v4(), $1, $2, course_id, $3, $4
+...   |
+168 | |         dto.watch_seconds.unwrap_or(0)
+169 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\blockchain\handlers.rs:14:16
+   |
+14 |       let rows = sqlx::query_as!(
+   |  ________________^
+15 | |         BlockchainService,
+16 | |         r#"SELECT id, title, slug, description,
+17 | |                   network::text as "network!",
+...  |
+23 | |            ORDER BY created_at DESC"#
+24 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\blockchain\handlers.rs:34:5
+   |
+34 | /     sqlx::query_as!(
+35 | |         BlockchainService,
+36 | |         r#"SELECT id, title, slug, description,
+37 | |                   network::text as "network!",
+...  |
+42 | |         slug
+43 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\blockchain\handlers.rs:54:5
+   |
+54 | /     sqlx::query!(
+55 | |         r#"INSERT INTO blockchain_inquiries
+56 | |               (id, name, email, company, network,
+57 | |                project_type, description, budget_range)
+...  |
+65 | |         dto.description, dto.budget_range
+66 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\blockchain\handlers.rs:80:15
+   |
+80 |       let row = sqlx::query_as!(
+   |  _______________^
+81 | |         BlockchainProject,
+82 | |         r#"INSERT INTO blockchain_projects
+83 | |               (id, client_id, title, description, network, project_type, budget_usd)
+...  |
+92 | |         dto.network, dto.project_type, dto.budget_usd
+93 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\blockchain\handlers.rs:103:16
+    |
+103 |       let rows = sqlx::query_as!(
+    |  ________________^
+104 | |         BlockchainProject,
+105 | |         r#"SELECT id, client_id, title, description,
+106 | |                   network::text as "network!",
+...   |
+114 | |         claims.sub
+115 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\community\handlers.rs:14:16
+   |
+14 |       let rows = sqlx::query_as!(
+   |  ________________^
+15 | |         Event,
+16 | |         r#"SELECT id, title, slug, description,
+17 | |                   event_type::text as "event_type!",
+...  |
+27 | |            ORDER BY scheduled_at ASC"#
+28 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\community\handlers.rs:38:5
+   |
+38 | /     sqlx::query_as!(
+39 | |         Event,
+40 | |         r#"SELECT id, title, slug, description,
+41 | |                   event_type::text as "event_type!",
+...  |
+49 | |         slug
+50 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\community\handlers.rs:66:15
+   |
+66 |       let row = sqlx::query_as!(
+   |  _______________^
+67 | |         Event,
+68 | |         r#"INSERT INTO events
+69 | |               (id, title, slug, description, event_type,
+...  |
+83 | |         dto.price_usd, dto.max_attendees, tz
+84 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\community\handlers.rs:95:18
+   |
+95 |       let exists = sqlx::query_scalar!(
+   |  __________________^
+96 | |         "SELECT id FROM event_registrations
+97 | |          WHERE event_id = $1 AND user_id = $2",
+98 | |         dto.event_id, claims.sub
+99 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\community\handlers.rs:109:5
+    |
+109 | /     sqlx::query!(
+110 | |         "INSERT INTO event_registrations (id, event_id, user_id)
+111 | |          VALUES (uuid_generate_v4(), $1, $2)",
+112 | |         dto.event_id, claims.sub
+113 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\community\handlers.rs:126:5
+    |
+126 | /     sqlx::query_as!(
+127 | |         Membership,
+128 | |         r#"SELECT id, user_id,
+129 | |                   tier::text as "tier!",
+...   |
+134 | |         claims.sub
+135 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\commerce\handlers.rs:14:16
+   |
+14 |       let rows = sqlx::query_as!(
+   |  ________________^
+15 | |         Product,
+16 | |         r#"SELECT id, title, slug, description, short_desc,
+17 | |                   product_type::text as "product_type!",
+...  |
+25 | |            ORDER BY sort_order ASC"#
+26 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\commerce\handlers.rs:36:5
+   |
+36 | /     sqlx::query_as!(
+37 | |         Product,
+38 | |         r#"SELECT id, title, slug, description, short_desc,
+39 | |                   product_type::text as "product_type!",
+...  |
+47 | |         slug
+48 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\commerce\handlers.rs:64:15
+   |
+64 |       let row = sqlx::query_as!(
+   |  _______________^
+65 | |         Product,
+66 | |         r#"INSERT INTO products
+67 | |               (id, title, slug, description, short_desc,
+...  |
+78 | |         dto.product_type, dto.price_usd, is_digital, &tags
+79 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\commerce\handlers.rs:91:5
+   |
+91 | /     sqlx::query!(
+92 | |         r#"INSERT INTO cart_items (id, user_id, product_id, quantity)
+93 | |            VALUES (uuid_generate_v4(), $1, $2, $3)
+94 | |            ON CONFLICT (user_id, product_id)
+95 | |            DO UPDATE SET quantity = cart_items.quantity + EXCLUDED.quantity"#,
+96 | |         claims.sub, dto.product_id, qty
+97 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\commerce\handlers.rs:107:16
+    |
+107 |       let rows = sqlx::query_as!(
+    |  ________________^
+108 | |         CartItem,
+109 | |         "SELECT id, user_id, product_id, quantity, added_at
+110 | |          FROM cart_items WHERE user_id = $1",
+111 | |         claims.sub
+112 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\commerce\handlers.rs:123:5
+    |
+123 | /     sqlx::query!(
+124 | |         "DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2",
+125 | |         claims.sub, product_id
+126 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\commerce\handlers.rs:136:16
+    |
+136 |       let rows = sqlx::query_as!(
+    |  ________________^
+137 | |         Order,
+138 | |         r#"SELECT id, user_id,
+139 | |                   status::text as "status!",
+...   |
+146 | |         claims.sub
+147 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\media\handlers.rs:30:16
+   |
+30 |       let rows = sqlx::query_as!(
+   |  ________________^
+31 | |         Post,
+32 | |         r#"SELECT id, author_id, title, slug, excerpt, content,
+33 | |                   status::text as "status!",
+...  |
+42 | |         limit, offset
+43 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\media\handlers.rs:53:5
+   |
+53 | /     sqlx::query!(
+54 | |         "UPDATE posts SET view_count = view_count + 1 WHERE slug = $1",
+55 | |         slug
+56 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\media\handlers.rs:61:5
+   |
+61 | /     sqlx::query_as!(
+62 | |         Post,
+63 | |         r#"SELECT id, author_id, title, slug, excerpt, content,
+64 | |                   status::text as "status!",
+...  |
+71 | |         slug
+72 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\media\handlers.rs:96:15
+    |
+ 96 |       let row = sqlx::query_as!(
+    |  _______________^
+ 97 | |         Post,
+ 98 | |         r#"INSERT INTO posts
+ 99 | |               (id, author_id, title, slug, excerpt, content,
+...   |
+113 | |         dto.seo_title, dto.seo_description, published_at
+114 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\media\handlers.rs:125:19
+    |
+125 |       let post_id = sqlx::query_scalar!(
+    |  ___________________^
+126 | |         "SELECT id FROM posts WHERE slug = $1", slug
+127 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\media\handlers.rs:132:20
+    |
+132 |       let inserted = sqlx::query!(
+    |  ____________________^
+133 | |         "INSERT INTO post_likes (id, post_id, user_id)
+134 | |          VALUES (uuid_generate_v4(), $1, $2)
+135 | |          ON CONFLICT DO NOTHING",
+136 | |         post_id, claims.sub
+137 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\media\handlers.rs:143:9
+    |
+143 | /         sqlx::query!(
+144 | |             "UPDATE posts SET likes_count = likes_count + 1 WHERE id = $1",
+145 | |             post_id
+146 | |         )
+    | |_________^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\media\handlers.rs:158:20
+    |
+158 |       let existing = sqlx::query_scalar!(
+    |  ____________________^
+159 | |         "SELECT id FROM newsletter_subscribers WHERE email = $1",
+160 | |         dto.email
+161 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\media\handlers.rs:170:5
+    |
+170 | /     sqlx::query!(
+171 | |         "INSERT INTO newsletter_subscribers
+172 | |             (id, email, full_name, confirm_token, source)
+173 | |          VALUES (uuid_generate_v4(), $1, $2, $3, $4)",
+174 | |         dto.email, dto.full_name, confirm_token, dto.source
+175 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\media\handlers.rs:216:20
+    |
+216 |       let affected = sqlx::query!(
+    |  ____________________^
+217 | |         "UPDATE newsletter_subscribers
+218 | |          SET is_confirmed = true, confirm_token = NULL
+219 | |          WHERE confirm_token = $1 AND is_confirmed = false",
+220 | |         token
+221 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\ai\handlers.rs:51:5
+   |
+51 | /     sqlx::query!(
+52 | |         "INSERT INTO ai_sessions (id, user_id, session_token, context)
+53 | |          VALUES ($1, $2, $3, $4::text::ai_session_context)",
+54 | |         id, user_id, session_token, context
+55 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> src\modules\ai\handlers.rs:88:19
+   |
+88 |       let session = sqlx::query!(
+   |  ___________________^
+89 | |         "SELECT id, context::text as context, user_id
+90 | |          FROM ai_sessions
+91 | |          WHERE session_token = $1 AND is_active = true",
+92 | |         dto.session_token
+93 | |     )
+   | |_____^
+   |
+   = help: message: Lazy instance has previously been poisoned
+   = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\ai\handlers.rs:176:5
+    |
+176 | /     sqlx::query!(
+177 | |         "INSERT INTO ai_messages
+178 | |             (id, session_id, role, content, tokens_used, model)
+179 | |          VALUES (uuid_generate_v4(), $1, 'user', $2, NULL, $3)",
+180 | |         session_id, dto.message, state.config.openai_model
+181 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\ai\handlers.rs:185:5
+    |
+185 | /     sqlx::query!(
+186 | |         "INSERT INTO ai_messages
+187 | |             (id, session_id, role, content, tokens_used, model)
+188 | |          VALUES (uuid_generate_v4(), $1, 'assistant', $2, $3, $4)",
+189 | |         session_id, reply, tokens_used, state.config.openai_model
+190 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\ai\handlers.rs:194:5
+    |
+194 | /     sqlx::query!(
+195 | |         "UPDATE ai_sessions
+196 | |          SET message_count = message_count + 2, updated_at = NOW()
+197 | |          WHERE session_token = $1",
+198 | |         dto.session_token
+199 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\ai\handlers.rs:214:19
+    |
+214 |       let session = sqlx::query_scalar!(
+    |  ___________________^
+215 | |         "SELECT id FROM ai_sessions WHERE session_token = $1",
+216 | |         session_token
+217 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_scalar` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\ai\handlers.rs:222:20
+    |
+222 |       let messages = sqlx::query_as!(
+    |  ____________________^
+223 | |         AiMessage,
+224 | |         r#"SELECT id, session_id, role::text as "role!",
+225 | |                   content, tokens_used, created_at
+...   |
+229 | |         session
+230 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+   --> src\modules\ai\handlers.rs:245:5
+    |
+245 | /     sqlx::query!(
+246 | |         "UPDATE ai_sessions SET is_active = false WHERE session_token = $1",
+247 | |         token
+248 | |     )
+    | |_____^
+    |
+    = help: message: Lazy instance has previously been poisoned
+    = note: this error originates in the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused import: `auth::Claims`
+ --> src\middleware\mod.rs:3:9
+  |
+3 | pub use auth::Claims;
+  |         ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `patch`
+ --> src\modules\auth\routes.rs:2:32
+  |
+2 | use axum::routing::{get, post, patch};
+  |                                ^^^^^
+
+warning: unused import: `post`
+ --> src\modules\services\routes.rs:2:26
+  |
+2 | use axum::routing::{get, post, patch};
+  |                          ^^^^
+
+warning: unused import: `utils::slug::unique_slug`
+ --> src\modules\blockchain\handlers.rs:7:5
+  |
+7 |     utils::slug::unique_slug,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `post`
+ --> src\modules\commerce\routes.rs:2:26
+  |
+2 | use axum::routing::{get, post, delete};
+  |                          ^^^^
+
+warning: `indigo-backend` (bin "indigo") generated 5 warnings
+error: could not compile `indigo-backend` (bin "indigo") due to 71 previous errors; 5 warnings emitted

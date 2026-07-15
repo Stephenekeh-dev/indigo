@@ -61,7 +61,7 @@ pub async fn start_session(
     let _: ()     = conn
         .set_ex(
             &redis_key,
-            serde_json::to_string(&Vec::<ClaudeMessage>::new()).unwrap(),
+            serde_json::to_string(&Vec::<OpenAiMessage>::new()).unwrap(),
             7200,
         )
         .await
@@ -82,7 +82,7 @@ pub async fn send_message(
         .await
         .map_err(|_| IndigoError::NotFound("Session".into()))?;
 
-    let mut history: Vec<ClaudeMessage> = serde_json::from_str(&history_json)
+    let mut history: Vec<OpenAiMessage> = serde_json::from_str(&history_json)
         .unwrap_or_default();
 
     let session = sqlx::query!(
@@ -97,23 +97,30 @@ pub async fn send_message(
 
     let system = system_prompt(session.context.as_deref().unwrap_or("general"));
 
-    history.push(ClaudeMessage {
+    // Build messages array — system message first, then history, then new user message
+    let mut messages = vec![
+        OpenAiMessage {
+            role:    "system".into(),
+            content: system,
+        },
+    ];
+    messages.extend(history.clone());
+    messages.push(OpenAiMessage {
         role:    "user".into(),
         content: dto.message.clone(),
     });
 
-    let request = ClaudeRequest {
-        model:      state.config.anthropic_model.clone(),
-        max_tokens: 1024,
-        system,
-        messages:   history.clone(),
+    // Call OpenAI API
+    let request = OpenAiRequest {
+        model:       state.config.openai_model.clone(),
+        messages:    messages.clone(),
+        max_tokens:  1024,
+        temperature: 0.7,
     };
 
     let response = reqwest::Client::new()
-        .post("https://api.anthropic.com/v1/messages")
-        .header("x-api-key",          &state.config.anthropic_api_key)
-        .header("anthropic-version",   "2023-06-01")
-        .header("content-type",        "application/json")
+        .post("https://api.openai.com/v1/chat/completions")
+        .bearer_auth(&state.config.openai_api_key)
         .json(&request)
         .send()
         .await
@@ -121,30 +128,37 @@ pub async fn send_message(
 
     if !response.status().is_success() {
         let err = response.text().await.unwrap_or_default();
-        return Err(IndigoError::AiService(format!("Claude API error: {}", err)));
+        return Err(IndigoError::AiService(format!("OpenAI error: {}", err)));
     }
 
-    let claude_res: ClaudeResponse = response
+    let openai_res: OpenAiResponse = response
         .json()
         .await
         .map_err(|e| IndigoError::AiService(e.to_string()))?;
 
-    let reply = claude_res
-        .content
+    let reply = openai_res
+        .choices
         .into_iter()
-        .find_map(|c| c.text)
+        .next()
+        .map(|c| c.message.content)
         .unwrap_or_else(|| "Sorry, I could not generate a response.".into());
 
-    let tokens_used = claude_res
+    let tokens_used = openai_res
         .usage
-        .map(|u| u.input_tokens + u.output_tokens)
+        .map(|u| u.total_tokens)
         .unwrap_or(0);
 
-    history.push(ClaudeMessage {
+    // Add user message and reply to history
+    history.push(OpenAiMessage {
+        role:    "user".into(),
+        content: dto.message.clone(),
+    });
+    history.push(OpenAiMessage {
         role:    "assistant".into(),
         content: reply.clone(),
     });
 
+    // Keep last 20 messages
     if history.len() > 20 {
         history = history[history.len() - 20..].to_vec();
     }
@@ -163,7 +177,7 @@ pub async fn send_message(
         "INSERT INTO ai_messages
             (id, session_id, role, content, tokens_used, model)
          VALUES (uuid_generate_v4(), $1, 'user', $2, NULL, $3)",
-        session_id, dto.message, state.config.anthropic_model
+        session_id, dto.message, state.config.openai_model
     )
     .execute(&state.db)
     .await?;
@@ -172,7 +186,7 @@ pub async fn send_message(
         "INSERT INTO ai_messages
             (id, session_id, role, content, tokens_used, model)
          VALUES (uuid_generate_v4(), $1, 'assistant', $2, $3, $4)",
-        session_id, reply, tokens_used, state.config.anthropic_model
+        session_id, reply, tokens_used, state.config.openai_model
     )
     .execute(&state.db)
     .await?;
