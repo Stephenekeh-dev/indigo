@@ -10,9 +10,11 @@ use super::models::*;
 
 fn system_prompt(context: &str) -> String {
     let base = "You are the Indigo AI assistant — a specialist in the Rust programming \
-                language and the Indigo platform. Indigo offers Rust consulting, courses, \
-                blockchain development, community events, and a shop. \
-                Always be helpful, precise, and concise.";
+            language and the Indigo platform. Indigo offers Rust consulting, courses, \
+            blockchain development, community events, and a shop. \
+            Always be helpful and concise. Keep responses short and to the point — \
+            maximum 3-4 sentences unless the user asks for more detail. \
+            Use plain text, no markdown formatting.";
     match context {
         "rust_help" => format!(
             "{} The user needs help with Rust code. Provide working code examples, \
@@ -114,8 +116,8 @@ pub async fn send_message(
     let request = OpenAiRequest {
         model:       state.config.openai_model.clone(),
         messages:    messages.clone(),
-        max_tokens:  1024,
-        temperature: 0.7,
+        max_tokens:  300,
+        temperature: 0.5,
     };
 
     let response = reqwest::Client::new()

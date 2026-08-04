@@ -171,3 +171,49 @@ pub async fn update_progress(
     .await?;
     Ok(Json(serde_json::json!({ "message": "Progress updated" })))
 }
+pub async fn update_course(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(dto): Json<CreateCourseDto>,
+) -> IndigoResult<Json<Course>> {
+    let tags    = dto.tags.unwrap_or_default();
+    let is_free = dto.is_free.unwrap_or(false);
+    let row = sqlx::query_as!(
+        Course,
+        r#"UPDATE courses SET
+              title      = $1,
+              description = $2,
+              level      = $3::text::course_level,
+              price_usd  = $4::float8,
+              is_free    = $5,
+              tags       = $6,
+              updated_at = NOW()
+           WHERE id = $7
+           RETURNING id, title, slug, description, short_desc,
+                     level::text as "level!",
+                     status::text as "status!",
+                     price_usd::float8 as "price_usd!",
+                     thumbnail_url, intro_video_url,
+                     total_duration_mins, total_lessons, is_free, tags,
+                     published_at, created_at, updated_at"#,
+        dto.title, dto.description, dto.level,
+        dto.price_usd, is_free, &tags, id
+    )
+    .fetch_one(&state.db)
+    .await?;
+    Ok(Json(row))
+}
+
+pub async fn delete_course(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> IndigoResult<Json<serde_json::Value>> {
+    sqlx::query!(
+        "DELETE FROM courses WHERE id = $1", id
+    )
+    .execute(&state.db)
+    .await?;
+    Ok(Json(serde_json::json!({ "message": "Course deleted" })))
+}

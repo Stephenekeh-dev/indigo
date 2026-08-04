@@ -230,3 +230,85 @@ pub async fn confirm_newsletter(
         "message": "Subscription confirmed. Welcome to Indigo!"
     })))
 }
+pub async fn update_post(
+    claims: Claims,
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+    Json(dto): Json<CreatePostDto>,
+) -> IndigoResult<Json<Post>> {
+    let tags   = dto.tags.unwrap_or_default();
+    let status = dto.status.unwrap_or_else(|| "draft".into());
+    let published_at = if status == "published" {
+        Some(chrono::Utc::now())
+    } else {
+        None
+    };
+
+    let row = sqlx::query_as!(
+        Post,
+        r#"UPDATE posts SET
+              title       = $1,
+              excerpt     = $2,
+              content     = $3,
+              status      = $4::text::post_status,
+              category    = $5::text::post_category,
+              tags        = $6,
+              published_at = COALESCE($7, published_at),
+              updated_at  = NOW()
+           WHERE slug = $8 AND author_id = $9
+           RETURNING id, author_id, title, slug, excerpt, content,
+                     status::text as "status!",
+                     category::text as "category!",
+                     cover_image_url, tags, read_time_mins,
+                     view_count, likes_count, seo_title, seo_description,
+                     published_at, created_at, updated_at"#,
+        dto.title, dto.excerpt, dto.content, status,
+        dto.category, &tags, published_at, slug, claims.sub
+    )
+    .fetch_one(&state.db)
+    .await?;
+    Ok(Json(row))
+}
+
+pub async fn delete_post(
+    claims: Claims,
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+) -> IndigoResult<Json<serde_json::Value>> {
+    let affected = sqlx::query!(
+        "DELETE FROM posts WHERE slug = $1 AND author_id = $2",
+        slug, claims.sub
+    )
+    .execute(&state.db)
+    .await?
+    .rows_affected();
+
+    if affected == 0 {
+        return Err(IndigoError::NotFound("Post".into()));
+    }
+    Ok(Json(serde_json::json!({ "message": "Post deleted" })))
+}
+
+pub async fn list_all_posts(
+    State(state): State<AppState>,
+    Query(q): Query<PostQuery>,
+) -> IndigoResult<Json<Vec<Post>>> {
+    let limit  = q.limit.unwrap_or(20).min(100);
+    let offset = (q.page.unwrap_or(1) - 1) * limit;
+    let rows = sqlx::query_as!(
+        Post,
+        r#"SELECT id, author_id, title, slug, excerpt, content,
+                  status::text as "status!",
+                  category::text as "category!",
+                  cover_image_url, tags, read_time_mins,
+                  view_count, likes_count, seo_title, seo_description,
+                  published_at, created_at, updated_at
+           FROM posts
+           ORDER BY created_at DESC
+           LIMIT $1 OFFSET $2"#,
+        limit, offset
+    )
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(rows))
+}

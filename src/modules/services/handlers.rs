@@ -263,3 +263,48 @@ pub async fn create_project(
     .await?;
     Ok(Json(row))
 }
+
+pub async fn update_service(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(dto): Json<CreateServiceDto>,
+) -> IndigoResult<Json<ServiceListing>> {
+    let slug = unique_slug(&dto.title, &id);
+    let row  = sqlx::query_as!(
+        ServiceListing,
+      r#"UPDATE service_listings SET
+          title          = $1,
+          slug           = $2,
+          description    = $3,
+          short_desc     = $4,
+          service_type   = $5::text::service_type,
+          price_usd      = $6::float8,
+          duration_hours = $7::float8,
+          updated_at     = NOW()
+       WHERE id = $8
+       RETURNING id, title, slug, description, short_desc,
+                 service_type::text as "service_type!",
+                 price_usd::float8 as "price_usd!",
+                 duration_hours::float8 as duration_hours,
+                 is_active, sort_order, created_at, updated_at"#,
+    dto.title, slug, dto.description, dto.short_desc,
+    dto.service_type, dto.price_usd, dto.duration_hours, id
+    )
+    .fetch_one(&state.db)
+    .await?;
+    Ok(Json(row))
+}
+
+pub async fn delete_service(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> IndigoResult<Json<serde_json::Value>> {
+    sqlx::query!(
+        "DELETE FROM service_listings WHERE id = $1", id
+    )
+    .execute(&state.db)
+    .await?;
+    Ok(Json(serde_json::json!({ "message": "Service deleted" })))
+}
