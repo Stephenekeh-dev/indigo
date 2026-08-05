@@ -231,7 +231,7 @@ pub async fn confirm_newsletter(
     })))
 }
 pub async fn update_post(
-    claims: Claims,
+    _claims: Claims,
     State(state): State<AppState>,
     Path(slug): Path<String>,
     Json(dto): Json<CreatePostDto>,
@@ -247,15 +247,15 @@ pub async fn update_post(
     let row = sqlx::query_as!(
         Post,
         r#"UPDATE posts SET
-              title       = $1,
-              excerpt     = $2,
-              content     = $3,
-              status      = $4::text::post_status,
-              category    = $5::text::post_category,
-              tags        = $6,
+              title        = $1,
+              excerpt      = $2,
+              content      = $3,
+              status       = $4::text::post_status,
+              category     = $5::text::post_category,
+              tags         = $6,
               published_at = COALESCE($7, published_at),
-              updated_at  = NOW()
-           WHERE slug = $8 AND author_id = $9
+              updated_at   = NOW()
+           WHERE slug = $8
            RETURNING id, author_id, title, slug, excerpt, content,
                      status::text as "status!",
                      category::text as "category!",
@@ -263,7 +263,7 @@ pub async fn update_post(
                      view_count, likes_count, seo_title, seo_description,
                      published_at, created_at, updated_at"#,
         dto.title, dto.excerpt, dto.content, status,
-        dto.category, &tags, published_at, slug, claims.sub
+        dto.category, &tags, published_at, slug
     )
     .fetch_one(&state.db)
     .await?;
@@ -271,21 +271,15 @@ pub async fn update_post(
 }
 
 pub async fn delete_post(
-    claims: Claims,
+    _claims: Claims,
     State(state): State<AppState>,
     Path(slug): Path<String>,
 ) -> IndigoResult<Json<serde_json::Value>> {
-    let affected = sqlx::query!(
-        "DELETE FROM posts WHERE slug = $1 AND author_id = $2",
-        slug, claims.sub
+    sqlx::query!(
+        "DELETE FROM posts WHERE slug = $1", slug
     )
     .execute(&state.db)
-    .await?
-    .rows_affected();
-
-    if affected == 0 {
-        return Err(IndigoError::NotFound("Post".into()));
-    }
+    .await?;
     Ok(Json(serde_json::json!({ "message": "Post deleted" })))
 }
 

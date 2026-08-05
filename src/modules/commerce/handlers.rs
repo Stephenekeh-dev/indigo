@@ -149,3 +149,51 @@ pub async fn my_orders(
     .await?;
     Ok(Json(rows))
 }
+
+pub async fn update_product(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(dto): Json<CreateProductDto>,
+) -> IndigoResult<Json<Product>> {
+    let tags       = dto.tags.unwrap_or_default();
+    let is_digital = dto.is_digital.unwrap_or(true);
+    let row = sqlx::query_as!(
+        Product,
+        r#"UPDATE products SET
+              title        = $1,
+              description  = $2,
+              short_desc   = $3,
+              product_type = $4::text::product_type,
+              price_usd    = $5::float8,
+              is_digital   = $6,
+              tags         = $7,
+              updated_at   = NOW()
+           WHERE id = $8
+           RETURNING id, title, slug, description, short_desc,
+                     product_type::text as "product_type!",
+                     status::text as "status!",
+                     price_usd::float8 as "price_usd!",
+                     compare_price::float8 as compare_price,
+                     is_digital, download_url, thumbnail_url,
+                     tags, stock_count, created_at, updated_at"#,
+        dto.title, dto.description, dto.short_desc,
+        dto.product_type, dto.price_usd, is_digital, &tags, id
+    )
+    .fetch_one(&state.db)
+    .await?;
+    Ok(Json(row))
+}
+
+pub async fn delete_product(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> IndigoResult<Json<serde_json::Value>> {
+    sqlx::query!(
+        "DELETE FROM products WHERE id = $1", id
+    )
+    .execute(&state.db)
+    .await?;
+    Ok(Json(serde_json::json!({ "message": "Product deleted" })))
+}
