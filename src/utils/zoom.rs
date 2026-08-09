@@ -73,7 +73,9 @@ pub async fn create_meeting(
         .map_err(|e| IndigoError::Zoom(e.to_string()))?;
 
     Ok(ZoomMeeting {
-        id:        data["id"].to_string(),
+        id: data["id"].as_i64()
+    .map(|n| n.to_string())
+    .unwrap_or_else(|| data["id"].as_str().unwrap_or("").to_owned()),
         join_url:  data["join_url"].as_str().unwrap_or("").to_owned(),
         start_url: data["start_url"].as_str().unwrap_or("").to_owned(),
         password:  data["password"].as_str().map(|s| s.to_owned()),

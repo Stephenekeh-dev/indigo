@@ -142,17 +142,23 @@ pub async fn create_booking(
     let duration_mins = (service.duration_hours.unwrap_or(1.0) * 60.0) as u32;
     let start_iso     = dto.scheduled_at.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
-    let zoom = create_meeting(
-        &state.config.zoom_account_id,
-        &state.config.zoom_client_id,
-        &state.config.zoom_client_secret,
-        &service.title,
-        &start_iso,
-        duration_mins,
-    )
-    .await
-    .ok();
-
+    let zoom = match create_meeting(
+    &state.config.zoom_account_id,
+    &state.config.zoom_client_id,
+    &state.config.zoom_client_secret,
+    &service.title,
+    &start_iso,
+    duration_mins,
+).await {
+    Ok(m) => {
+        tracing::info!("Zoom meeting created: {}", m.id);
+        Some(m)
+    }
+    Err(e) => {
+        tracing::error!("Zoom meeting creation failed: {:?}", e);
+        None
+    }
+};
     let id = Uuid::new_v4();
     let booking = sqlx::query_as!(
         Booking,

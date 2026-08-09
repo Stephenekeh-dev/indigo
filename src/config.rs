@@ -25,6 +25,10 @@ pub struct AppConfig {
     // Stripe
     pub stripe_secret_key:     String,
     pub stripe_webhook_secret: String,
+   
+   // Paystack Credential
+     pub paystack_secret_key: String,
+     pub paystack_public_key:  String,
 
     // Zoom
     pub zoom_account_id:    String,
@@ -117,7 +121,12 @@ impl AppConfig {
                 .unwrap_or_else(|_| "indigo-assets".into()),
             r2_public_url: std::env::var("R2_PUBLIC_URL")
                 .unwrap_or_default(),
+         paystack_secret_key: std::env::var("PAYSTACK_SECRET_KEY")
+    .unwrap_or_default(),
+      paystack_public_key: std::env::var("PAYSTACK_PUBLIC_KEY")
+    .unwrap_or_default(),
         })
+        
     }
 
     pub fn is_production(&self) -> bool {

@@ -6,6 +6,7 @@ pub mod community;
 pub mod commerce;
 pub mod media;
 pub mod ai;
+pub mod payments;
 
 use axum::Router;
 use crate::state::AppState;
@@ -20,4 +21,5 @@ pub fn routes(state: AppState) -> Router {
         .nest("/api/v1/commerce",   commerce::routes(state.clone()))
         .nest("/api/v1/media",      media::routes(state.clone()))
         .nest("/api/v1/ai",         ai::routes(state.clone()))
+        .nest("/api/v1/payments", payments::routes::routes(state.clone()))
 }
