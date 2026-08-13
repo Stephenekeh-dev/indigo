@@ -43,6 +43,12 @@ pub struct AppConfig {
     pub openai_api_key: String,
     pub openai_model:   String,
 
+    // Email Config
+    pub mail_host:     String,
+    pub mail_port:     u16,
+    pub mail_username: String,
+    pub mail_password: String,
+
     // R2 Storage
     pub r2_account_id:        String,
     pub r2_access_key_id:     String,
@@ -124,6 +130,16 @@ impl AppConfig {
          paystack_secret_key: std::env::var("PAYSTACK_SECRET_KEY")
     .unwrap_or_default(),
       paystack_public_key: std::env::var("PAYSTACK_PUBLIC_KEY")
+    .unwrap_or_default(),
+    mail_host:     std::env::var("MAIL_HOST")
+    .unwrap_or_else(|_| "smtp.gmail.com".into()),
+mail_port:     std::env::var("MAIL_PORT")
+    .unwrap_or_else(|_| "465".into())
+    .parse()
+    .unwrap_or(465),
+mail_username: std::env::var("MAIL_USERNAME")
+    .unwrap_or_default(),
+mail_password: std::env::var("MAIL_PASSWORD")
     .unwrap_or_default(),
         })
         

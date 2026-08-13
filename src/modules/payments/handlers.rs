@@ -77,28 +77,57 @@ pub async fn verify_payment(
     let data = ps.data
         .ok_or_else(|| IndigoError::Internal(anyhow::anyhow!("No data from Paystack")))?;
 
-    let paid = data.status == "success";
+    let paid      = data.status == "success";
+    let amount_usd = data.amount as f64 / 160000.0;
 
-    // If payment successful, create order in database
     if paid {
-        let amount_usd = data.amount as f64 / 160000.0; // convert back from kobo
+        // Create order in database
         sqlx::query!(
-    r#"INSERT INTO orders (id, user_id, status, total_usd, stripe_payment_id)
-       SELECT uuid_generate_v4(), id, 'paid', $1::float8, $2
-       FROM users WHERE email = $3
-       ON CONFLICT DO NOTHING"#,
-    amount_usd,
-    data.reference,
-    data.customer.email
-)
+            r#"INSERT INTO orders (id, user_id, status, total_usd, stripe_payment_id)
+               SELECT uuid_generate_v4(), id, 'paid', $1::float8, $2
+               FROM users WHERE email = $3
+               ON CONFLICT DO NOTHING"#,
+            amount_usd,
+            data.reference,
+            data.customer.email
+        )
         .execute(&state.db)
         .await?;
+
+        // Send order confirmation email
+        let user = sqlx::query!(
+    "SELECT full_name FROM users WHERE email = $1",
+    data.customer.email
+)
+.fetch_optional(&state.db)
+.await?;
+
+if let Some(u) = user {
+    let amount_str = format!("${:.2}", amount_usd);
+    let _ = crate::utils::email::send_email_smtp(
+        &state.config.mail_host,
+        state.config.mail_port,
+        &state.config.mail_username,
+        &state.config.mail_password,
+        &state.config.mail_username,
+        crate::utils::email::EmailPayload {
+            to:      data.customer.email.clone(),
+            subject: format!("Order Confirmed — Ref: {}", data.reference),
+            html:    crate::utils::email::order_confirmation_email(
+                &u.full_name,
+                &data.reference,
+                &amount_str,
+                "Digital products from Indigo Shop",
+            ),
+        },
+    ).await;
+}
     }
 
     Ok(Json(PaymentVerifyResponse {
         status:    data.status,
         reference: data.reference,
-        amount:    data.amount as f64 / 160000.0,
+        amount:    amount_usd,
         email:     data.customer.email,
         paid,
     }))
@@ -119,17 +148,46 @@ pub async fn paystack_webhook(
         let amount_usd = amount as f64 / 160000.0;
 
         if !reference.is_empty() && !email.is_empty() {
+            // 1. Insert order ends here after .await?;
             sqlx::query!(
-    r#"INSERT INTO orders (id, user_id, status, total_usd, stripe_payment_id)
-       SELECT uuid_generate_v4(), id, 'paid', $1::float8, $2
-       FROM users WHERE email = $3
-       ON CONFLICT DO NOTHING"#,
-    amount_usd,
-    reference,
-    email
-)
+                r#"INSERT INTO orders (id, user_id, status, total_usd, stripe_payment_id)
+                   SELECT uuid_generate_v4(), id, 'paid', $1::float8, $2
+                   FROM users WHERE email = $3
+                   ON CONFLICT DO NOTHING"#,
+                amount_usd,
+                reference,
+                email
+            )
             .execute(&state.db)
             .await?;
+
+            // 2. Your email logic starts here
+            let user = sqlx::query!(
+                "SELECT full_name FROM users WHERE email = $1", email
+            )
+            .fetch_optional(&state.db)
+            .await?;
+
+            if let Some(u) = user {
+                let amount_str = format!("${:.2}", amount_usd);
+                let _ = crate::utils::email::send_email_smtp(
+                    &state.config.mail_host,
+                    state.config.mail_port,
+                    &state.config.mail_username,
+                    &state.config.mail_password,
+                    &state.config.mail_username,
+                    crate::utils::email::EmailPayload {
+                        to:      email.to_string(),
+                        subject: format!("Payment Received — Ref: {}", reference),
+                        html:    crate::utils::email::order_confirmation_email(
+                            &u.full_name,
+                            reference,
+                            &amount_str,
+                            "Indigo Shop purchase",
+                        ),
+                    },
+                ).await;
+            }
         }
     }
 

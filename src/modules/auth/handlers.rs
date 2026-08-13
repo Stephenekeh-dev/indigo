@@ -60,16 +60,18 @@ pub async fn register(
         "{}/auth/verify-email/{}",
         state.config.frontend_url, verify_token
     );
-    let _ = send_email(
-        &state.config.resend_api_key,
-        &state.config.email_from,
-        EmailPayload {
-            to:      user.email.clone(),
-            subject: "Welcome to Indigo — verify your email".into(),
-            html:    verification_email(&user.full_name, &verify_link),
-        },
-    )
-    .await;
+    let _ = crate::utils::email::send_email_smtp(
+    &state.config.mail_host,
+    state.config.mail_port,
+    &state.config.mail_username,
+    &state.config.mail_password,
+    &state.config.mail_username,
+    crate::utils::email::EmailPayload {
+        to:      user.email.clone(),
+        subject: "Welcome to Indigo — please verify your email".into(),
+        html:    crate::utils::email::verification_email(&user.full_name, &verify_link),
+    },
+).await;
 
     let token = generate_jwt(
         user.id, &user.email, UserRole::User,
@@ -269,16 +271,18 @@ pub async fn forgot_password(
             "{}/auth/reset-password/{}",
             state.config.frontend_url, reset_token
         );
-        let _ = send_email(
-            &state.config.resend_api_key,
-            &state.config.email_from,
-            EmailPayload {
-                to:      dto.email.clone(),
-                subject: "Reset your Indigo password".into(),
-                html:    password_reset_email(&u.full_name, &reset_link),
-            },
-        )
-        .await;
+        let _ = crate::utils::email::send_email_smtp(
+    &state.config.mail_host,
+    state.config.mail_port,
+    &state.config.mail_username,
+    &state.config.mail_password,
+    &state.config.mail_username,
+    crate::utils::email::EmailPayload {
+        to:      dto.email.clone(),
+        subject: "Reset your Indigo password".into(),
+        html:    crate::utils::email::password_reset_email(&u.full_name, &reset_link),
+    },
+).await;
     }
 
     Ok(Json(serde_json::json!({

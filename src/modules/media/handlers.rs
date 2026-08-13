@@ -181,27 +181,15 @@ pub async fn subscribe_newsletter(
         state.config.frontend_url, confirm_token
     );
     let name = dto.full_name.as_deref().unwrap_or("there");
-    let _ = send_email(
-        &state.config.resend_api_key,
-        &state.config.email_from,
-        EmailPayload {
-            to:      dto.email.clone(),
-            subject: "Confirm your Indigo newsletter subscription".into(),
-            html: format!(
-                r#"<div style="font-family:sans-serif;max-width:520px;margin:auto">
-                     <h2 style="color:#4f46e5">One click to confirm</h2>
-                     <p>Hi {}! Click below to confirm your subscription.</p>
-                     <a href="{}"
-                        style="display:inline-block;padding:12px 28px;
-                               background:#4f46e5;color:#fff;border-radius:8px;
-                               text-decoration:none;font-weight:600">
-                       Confirm Subscription
-                     </a>
-                   </div>"#,
-                name, confirm_link
-            ),
-        },
-    )
+let _ = send_email(
+    &state.config.resend_api_key,
+    &state.config.email_from,
+    EmailPayload {
+        to:      dto.email.clone(),
+        subject: "Confirm your Indigo newsletter subscription".into(),
+        html:    crate::utils::email::newsletter_confirm_email(name, &confirm_link),
+    },
+)
     .await;
 
     Ok(Json(serde_json::json!({

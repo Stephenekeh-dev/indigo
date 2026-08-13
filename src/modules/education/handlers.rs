@@ -107,9 +107,7 @@ pub async fn enroll(
     .await?;
 
     if existing.is_some() {
-        return Err(IndigoError::Conflict(
-            "Already enrolled in this course".into()
-        ));
+        return Err(IndigoError::Conflict("Already enrolled in this course".into()));
     }
 
     let id = Uuid::new_v4();
@@ -126,6 +124,46 @@ pub async fn enroll(
     )
     .fetch_one(&state.db)
     .await?;
+
+    // Send enrollment confirmation email
+let course = sqlx::query!(
+    "SELECT title, slug FROM courses WHERE id = $1",
+    dto.course_id
+)
+.fetch_optional(&state.db)
+.await?;
+
+let user = sqlx::query!(
+    "SELECT full_name, email FROM users WHERE id = $1",
+    claims.sub
+)
+.fetch_optional(&state.db)
+.await?;
+
+if let (Some(c), Some(u)) = (course, user) {
+    let course_url = format!(
+        "{}/courses/{}/learn",
+        state.config.frontend_url, c.slug
+    );
+    let _ = crate::utils::email::send_email_smtp(
+        &state.config.mail_host,
+        state.config.mail_port,
+        &state.config.mail_username,
+        &state.config.mail_password,
+        &state.config.mail_username,
+        crate::utils::email::EmailPayload {
+            to:      u.email,
+            subject: format!("You are enrolled in {} — Indigo", c.title),
+            html:    crate::utils::email::enrollment_confirmation_email(
+                &u.full_name,
+                &c.title,
+                &course_url,
+            ),
+        },
+    ).await;
+
+    }
+
     Ok(Json(row))
 }
 

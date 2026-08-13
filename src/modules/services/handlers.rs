@@ -13,11 +13,7 @@ use crate::{
 };
 use super::models::*;
 
-#[derive(Deserialize)]
-pub struct PaginationQuery {
-    pub page:  Option<i64>,
-    pub limit: Option<i64>,
-}
+// ── Services ───────────────────────────────────────────────────
 
 pub async fn list_services(
     State(state): State<AppState>,
@@ -85,6 +81,57 @@ pub async fn create_service(
     Ok(Json(row))
 }
 
+pub async fn update_service(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(dto): Json<CreateServiceDto>,
+) -> IndigoResult<Json<ServiceListing>> {
+    let slug = unique_slug(&dto.title, &id);
+    let row  = sqlx::query_as!(
+        ServiceListing,
+        r#"UPDATE service_listings SET
+              title          = $1,
+              slug           = $2,
+              description    = $3,
+              short_desc     = $4,
+              service_type   = $5::text::service_type,
+              price_usd      = $6::float8,
+              duration_hours = $7::float8,
+              updated_at     = NOW()
+           WHERE id = $8
+           RETURNING id, title, slug, description, short_desc,
+                     service_type::text as "service_type!",
+                     price_usd::float8 as "price_usd!",
+                     duration_hours::float8 as duration_hours,
+                     is_active, sort_order, created_at, updated_at"#,
+        dto.title, slug, dto.description, dto.short_desc,
+        dto.service_type, dto.price_usd, dto.duration_hours, id
+    )
+    .fetch_one(&state.db)
+    .await?;
+    Ok(Json(row))
+}
+
+pub async fn delete_service(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> IndigoResult<Json<serde_json::Value>> {
+    sqlx::query!("DELETE FROM service_listings WHERE id = $1", id)
+        .execute(&state.db)
+        .await?;
+    Ok(Json(serde_json::json!({ "message": "Service deleted" })))
+}
+
+// ── Bookings ───────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct PaginationQuery {
+    pub page:  Option<i64>,
+    pub limit: Option<i64>,
+}
+
 pub async fn list_my_bookings(
     claims: Claims,
     State(state): State<AppState>,
@@ -142,23 +189,18 @@ pub async fn create_booking(
     let duration_mins = (service.duration_hours.unwrap_or(1.0) * 60.0) as u32;
     let start_iso     = dto.scheduled_at.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
-    let zoom = match create_meeting(
-    &state.config.zoom_account_id,
-    &state.config.zoom_client_id,
-    &state.config.zoom_client_secret,
-    &service.title,
-    &start_iso,
-    duration_mins,
-).await {
-    Ok(m) => {
-        tracing::info!("Zoom meeting created: {}", m.id);
-        Some(m)
-    }
-    Err(e) => {
-        tracing::error!("Zoom meeting creation failed: {:?}", e);
-        None
-    }
-};
+    // Generate Google Meet link — no API call needed
+    let meeting = create_meeting(
+        "",  // account_id not needed for Google Meet
+        "",  // client_id not needed
+        "",  // client_secret not needed
+        &service.title,
+        &start_iso,
+        duration_mins,
+    )
+    .await
+    .ok();
+
     let id = Uuid::new_v4();
     let booking = sqlx::query_as!(
         Booking,
@@ -172,34 +214,46 @@ pub async fn create_booking(
                      client_notes, consultant_notes,
                      amount_paid_usd::float8 as amount_paid_usd,
                      stripe_payment_id, created_at, updated_at"#,
-        id, dto.service_id, claims.sub, dto.scheduled_at, duration_mins as i32,
-        zoom.as_ref().map(|z| z.id.as_str()),
-        zoom.as_ref().map(|z| z.join_url.as_str()),
-        zoom.as_ref().map(|z| z.start_url.as_str()),
+        id,
+        dto.service_id,
+        claims.sub,
+        dto.scheduled_at,
+        duration_mins as i32,
+        meeting.as_ref().map(|m| m.id.as_str()),
+        meeting.as_ref().map(|m| m.join_url.as_str()),
+        meeting.as_ref().map(|m| m.start_url.as_str()),
         dto.client_notes
     )
     .fetch_one(&state.db)
     .await?;
 
-    if let Ok(user) = sqlx::query!(
-        "SELECT full_name, email FROM users WHERE id = $1", claims.sub
+    // Send confirmation email — best effort
+    if let Ok(Some(user)) = sqlx::query!(
+        "SELECT full_name, email FROM users WHERE id = $1",
+        claims.sub
     )
-    .fetch_one(&state.db)
+    .fetch_optional(&state.db)
     .await
     {
-        let date_str = dto.scheduled_at.format("%B %d, %Y at %H:%M UTC").to_string();
-        let zoom_url = booking.zoom_join_url.clone().unwrap_or_default();
-        let _ = send_email(
-            &state.config.resend_api_key,
-            &state.config.email_from,
-            EmailPayload {
-                to:      user.email,
-                subject: format!("Booking Confirmed — {}", service.title),
-                html:    booking_confirmation_email(
-                    &user.full_name, &service.title, &date_str, &zoom_url,
-                ),
-            },
-        ).await;
+        let date_str  = dto.scheduled_at.format("%B %d, %Y at %H:%M UTC").to_string();
+        let meet_url  = booking.zoom_join_url.clone().unwrap_or_default();
+       let _ = crate::utils::email::send_email_smtp(
+    &state.config.mail_host,
+    state.config.mail_port,
+    &state.config.mail_username,
+    &state.config.mail_password,
+    &state.config.mail_username,
+    crate::utils::email::EmailPayload {
+        to:      user.email,
+        subject: format!("Booking Confirmed — {} (Google meet)", service.title),
+        html:    crate::utils::email::booking_confirmation_email(
+            &user.full_name,
+            &service.title,
+            &date_str,
+            &meet_url,
+        ),
+    },
+).await;
     }
 
     Ok(Json(booking))
@@ -224,6 +278,8 @@ pub async fn cancel_booking(
     }
     Ok(Json(serde_json::json!({ "message": "Booking cancelled" })))
 }
+
+// ── Projects ───────────────────────────────────────────────────
 
 pub async fn list_my_projects(
     claims: Claims,
@@ -268,49 +324,4 @@ pub async fn create_project(
     .fetch_one(&state.db)
     .await?;
     Ok(Json(row))
-}
-
-pub async fn update_service(
-    _claims: Claims,
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-    Json(dto): Json<CreateServiceDto>,
-) -> IndigoResult<Json<ServiceListing>> {
-    let slug = unique_slug(&dto.title, &id);
-    let row  = sqlx::query_as!(
-        ServiceListing,
-      r#"UPDATE service_listings SET
-          title          = $1,
-          slug           = $2,
-          description    = $3,
-          short_desc     = $4,
-          service_type   = $5::text::service_type,
-          price_usd      = $6::float8,
-          duration_hours = $7::float8,
-          updated_at     = NOW()
-       WHERE id = $8
-       RETURNING id, title, slug, description, short_desc,
-                 service_type::text as "service_type!",
-                 price_usd::float8 as "price_usd!",
-                 duration_hours::float8 as duration_hours,
-                 is_active, sort_order, created_at, updated_at"#,
-    dto.title, slug, dto.description, dto.short_desc,
-    dto.service_type, dto.price_usd, dto.duration_hours, id
-    )
-    .fetch_one(&state.db)
-    .await?;
-    Ok(Json(row))
-}
-
-pub async fn delete_service(
-    _claims: Claims,
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> IndigoResult<Json<serde_json::Value>> {
-    sqlx::query!(
-        "DELETE FROM service_listings WHERE id = $1", id
-    )
-    .execute(&state.db)
-    .await?;
-    Ok(Json(serde_json::json!({ "message": "Service deleted" })))
 }
