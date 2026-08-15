@@ -8,7 +8,7 @@ use crate::{
     utils::{
         slug::unique_slug,
         zoom::create_meeting,
-        email::{send_email, EmailPayload, booking_confirmation_email},
+    
     },
 };
 use super::models::*;
@@ -228,36 +228,45 @@ pub async fn create_booking(
     .await?;
 
     // Send confirmation email — best effort
-    if let Ok(Some(user)) = sqlx::query!(
+     match sqlx::query!(
         "SELECT full_name, email FROM users WHERE id = $1",
         claims.sub
     )
     .fetch_optional(&state.db)
     .await
     {
-        let date_str  = dto.scheduled_at.format("%B %d, %Y at %H:%M UTC").to_string();
-        let meet_url  = booking.zoom_join_url.clone().unwrap_or_default();
-       let _ = crate::utils::email::send_email_smtp(
-    &state.config.mail_host,
-    state.config.mail_port,
-    &state.config.mail_username,
-    &state.config.mail_password,
-    &state.config.mail_username,
-    crate::utils::email::EmailPayload {
-        to:      user.email,
-        subject: format!("Booking Confirmed — {} (Google meet)", service.title),
-        html:    crate::utils::email::booking_confirmation_email(
-            &user.full_name,
-            &service.title,
-            &date_str,
-            &meet_url,
-        ),
-    },
-).await;
+        Ok(Some(user)) => {
+            tracing::info!("Sending booking email to {}", user.email);
+            let date_str = dto.scheduled_at.format("%B %d, %Y at %H:%M UTC").to_string();
+            let meet_url = booking.zoom_join_url.clone().unwrap_or_default();
+            match crate::utils::email::send_email_smtp(
+                &state.config.mail_host,
+                state.config.mail_port,
+                &state.config.mail_username,
+                &state.config.mail_password,
+                &state.config.mail_username,
+                crate::utils::email::EmailPayload {
+                    to:      user.email.clone(),
+                    subject: format!("Booking Confirmed — {} (Google Meet)", service.title),
+                    html:    crate::utils::email::booking_confirmation_email(
+                        &user.full_name,
+                        &service.title,
+                        &date_str,
+                        &meet_url,
+                    ),
+                },
+            ).await {
+                Ok(_)  => tracing::info!("Email sent to {}", user.email),
+                Err(e) => tracing::error!("Email failed: {:?}", e),
+            }
+        }
+        Ok(None) => tracing::error!("User not found: {}", claims.sub),
+        Err(e)   => tracing::error!("DB error: {:?}", e),
     }
 
     Ok(Json(booking))
 }
+
 
 pub async fn cancel_booking(
     claims: Claims,
