@@ -57,7 +57,7 @@ pub async fn register(
     .await?;
 
     let verify_link = format!(
-        "{}/auth/verify-email/{}",
+      "{}/verify-email/{}",
         state.config.frontend_url, verify_token
     );
     let _ = crate::utils::email::send_email_smtp(
@@ -268,7 +268,7 @@ pub async fn forgot_password(
         .await?;
 
         let reset_link = format!(
-            "{}/auth/reset-password/{}",
+            "{}/reset-password/{}",
             state.config.frontend_url, reset_token
         );
         let _ = crate::utils::email::send_email_smtp(

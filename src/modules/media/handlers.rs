@@ -8,7 +8,7 @@ use crate::{
     utils::{
         slug::unique_slug,
         tokens::generate_secure_token,
-        email::{send_email, EmailPayload},
+        email::EmailPayload,
     },
 };
 use super::models::*;
@@ -166,7 +166,7 @@ pub async fn subscribe_newsletter(
         return Ok(Json(serde_json::json!({ "message": "Already subscribed" })));
     }
 
-    let confirm_token = generate_secure_token();
+    let confirm_token = crate::utils::tokens::generate_secure_token();
     sqlx::query!(
         "INSERT INTO newsletter_subscribers
             (id, email, full_name, confirm_token, source)
@@ -181,22 +181,28 @@ pub async fn subscribe_newsletter(
         state.config.frontend_url, confirm_token
     );
     let name = dto.full_name.as_deref().unwrap_or("there");
-let _ = send_email(
-    &state.config.resend_api_key,
-    &state.config.email_from,
-    EmailPayload {
-        to:      dto.email.clone(),
-        subject: "Confirm your Indigo newsletter subscription".into(),
-        html:    crate::utils::email::newsletter_confirm_email(name, &confirm_link),
-    },
-)
-    .await;
+
+    tracing::info!("Sending newsletter confirmation to {}", dto.email);
+    match crate::utils::email::send_email_smtp(
+        &state.config.mail_host,
+        state.config.mail_port,
+        &state.config.mail_username,
+        &state.config.mail_password,
+        &state.config.mail_username,
+        crate::utils::email::EmailPayload {
+            to:      dto.email.clone(),
+            subject: "Confirm your Indigo newsletter subscription".into(),
+            html:    crate::utils::email::newsletter_confirm_email(name, &confirm_link),
+        },
+    ).await {
+        Ok(_)  => tracing::info!("Newsletter email sent to {}", dto.email),
+        Err(e) => tracing::error!("Newsletter email FAILED: {:?}", e),
+    }
 
     Ok(Json(serde_json::json!({
         "message": "Check your email to confirm your subscription"
     })))
 }
-
 pub async fn confirm_newsletter(
     State(state): State<AppState>,
     Path(token): Path<String>,
