@@ -47,7 +47,7 @@ pub async fn register(
     .await?;
 
     let verify_token = generate_secure_token();
-    let expires_at   = Utc::now() + chrono::Duration::hours(24);
+    let expires_at   = Utc::now() + chrono::Duration::days(7);
     sqlx::query!(
         "INSERT INTO email_verification_tokens (id, user_id, token, expires_at)
          VALUES (uuid_generate_v4(), $1, $2, $3)",
