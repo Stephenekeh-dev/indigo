@@ -328,6 +328,31 @@ pub async fn reset_password(
     Ok(Json(serde_json::json!({ "message": "Password reset successfully" })))
 }
 
+pub async fn list_users(
+    _claims: Claims,
+    State(state): State<AppState>,
+) -> IndigoResult<Json<Vec<serde_json::Value>>> {
+    let rows = sqlx::query!(
+        r#"SELECT id, full_name, email, role::text as "role!",
+                  email_verified, created_at
+           FROM users
+           ORDER BY created_at DESC"#
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let users: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
+        "id":             r.id,
+        "full_name":      r.full_name,
+        "email":          r.email,
+        "role":           r.role,
+        "email_verified": r.email_verified,
+        "created_at":     r.created_at,
+    })).collect();
+
+    Ok(Json(users))
+}
+
 pub async fn logout(
     State(state): State<AppState>,
     Json(body): Json<serde_json::Value>,

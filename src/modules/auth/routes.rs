@@ -12,5 +12,6 @@ pub fn routes(state: AppState) -> Router {
         .route("/verify-email/:token",   get(verify_email))
         .route("/forgot-password",       post(forgot_password))
         .route("/reset-password",        post(reset_password))
+        .route("/users",                 get(list_users))
         .with_state(state)
 }
