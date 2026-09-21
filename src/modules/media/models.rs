@@ -55,3 +55,9 @@ pub struct SubscribeDto {
     pub full_name: Option<String>,
     pub source:    Option<String>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct BroadcastDto {
+    pub subject: String,
+    pub content: String,
+}

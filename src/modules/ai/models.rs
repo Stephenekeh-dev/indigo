@@ -27,7 +27,7 @@ pub struct AiMessage {
     pub created_at: DateTime<Utc>,
 }
 
-// ── Request DTOs ───────────────────────────────────────────────
+// Request DTOs 
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct StartSessionDto {
@@ -41,7 +41,7 @@ pub struct SendMessageDto {
     pub message:       String,
 }
 
-// ── Response DTOs ──────────────────────────────────────────────
+//  Response DTOs 
 
 #[derive(Debug, Serialize)]
 pub struct SessionResponse {
@@ -55,7 +55,7 @@ pub struct MessageResponse {
     pub tokens_used:  i32,
     pub session_token: String,
 }
-// ── OpenAI API types ───────────────────────────────────────────
+// OpenAI API types 
 
 #[derive(Debug, Serialize)]
 pub struct OpenAiRequest {

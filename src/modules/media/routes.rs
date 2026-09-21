@@ -19,5 +19,9 @@ pub fn routes(state: AppState) -> Router {
             post(subscribe_newsletter))
         .route("/newsletter/confirm/:token",
             get(confirm_newsletter))
+        .route("/newsletter/broadcast",
+         post(broadcast_newsletter))
+         .route("/newsletter/subscribers",
+          get(list_subscribers))
         .with_state(state)
 }

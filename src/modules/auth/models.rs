@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use validator::Validate;
 
-// ── DB row types ───────────────────────────────────────────────
+//  DB row types 
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct User {
@@ -24,8 +24,7 @@ pub struct User {
     pub updated_at:     DateTime<Utc>,
 }
 
-// ── Request DTOs ───────────────────────────────────────────────
-
+//  Request DTOs 
 #[derive(Debug, Deserialize, Validate)]
 pub struct RegisterDto {
     #[validate(length(min = 2, max = 150))]
@@ -66,7 +65,7 @@ pub struct UpdateProfileDto {
     pub timezone:     Option<String>,
 }
 
-// ── Response DTOs ──────────────────────────────────────────────
+// Response DTOs 
 
 #[derive(Debug, Serialize)]
 pub struct AuthResponse {

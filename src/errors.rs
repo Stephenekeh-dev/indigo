@@ -9,7 +9,7 @@ use thiserror::Error;
 /// All possible Indigo errors — each maps to an HTTP status code
 #[derive(Debug, Error)]
 pub enum IndigoError {
-    // ── Auth ───────────────────────────────────────────────────────────────
+    //  Auth 
     #[error("Invalid credentials")]
     InvalidCredentials,
 
@@ -22,18 +22,18 @@ pub enum IndigoError {
     #[error("Authentication required")]
     Unauthorized,
 
-    // ── Resource ───────────────────────────────────────────────────────────
+    //  Resource 
     #[error("{0} not found")]
     NotFound(String),
 
     #[error("{0} already exists")]
     Conflict(String),
 
-    // ── Validation ─────────────────────────────────────────────────────────
+    // Validation 
     #[error("Validation error: {0}")]
     Validation(String),
 
-    // ── External services ──────────────────────────────────────────────────
+    // External services 
     #[error("Payment processing failed: {0}")]
     Payment(String),
 
@@ -46,7 +46,7 @@ pub enum IndigoError {
     #[error("Zoom API error: {0}")]
     Zoom(String),
 
-    // ── Infrastructure ─────────────────────────────────────────────────────
+    //  Infrastructure 
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 

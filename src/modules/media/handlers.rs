@@ -7,6 +7,7 @@ use crate::{
     middleware::auth::Claims,
     utils::{
         slug::unique_slug,
+        email::newsletter_broadcast_email,
         tokens::generate_secure_token,
         email::EmailPayload,
     },
@@ -299,4 +300,76 @@ pub async fn list_all_posts(
     .fetch_all(&state.db)
     .await?;
     Ok(Json(rows))
+}
+pub async fn broadcast_newsletter(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Json(dto): Json<BroadcastDto>,
+) -> IndigoResult<Json<serde_json::Value>> {
+    // Get all confirmed subscribers
+    let subscribers = sqlx::query!(
+        "SELECT email, full_name FROM newsletter_subscribers
+     WHERE unsubscribed_at IS NULL"
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let count = subscribers.len();
+    let mut sent = 0;
+    let mut failed = 0;
+
+    for sub in &subscribers {
+        let name = sub.full_name.as_deref().unwrap_or("there");
+        let html = newsletter_broadcast_email(
+            name,
+            &dto.subject,
+            &dto.content,
+            &state.config.frontend_url,
+        );
+
+        match crate::utils::email::send_email_smtp(
+            &state.config.mail_host,
+            state.config.mail_port,
+            &state.config.mail_username,
+            &state.config.mail_password,
+            &state.config.mail_username,
+            crate::utils::email::EmailPayload {
+                to:      sub.email.clone(),
+                subject: dto.subject.clone(),
+                html,
+            },
+        ).await {
+            Ok(_)  => { sent += 1; tracing::info!("Newsletter sent to {}", sub.email); }
+            Err(e) => { failed += 1; tracing::error!("Newsletter failed for {}: {:?}", sub.email, e); }
+        }
+    }
+
+    Ok(Json(serde_json::json!({
+        "message": format!("Newsletter sent to {}/{} subscribers", sent, count),
+        "total":   count,
+        "sent":    sent,
+        "failed":  failed,
+    })))
+}
+
+pub async fn list_subscribers(
+    _claims: Claims,
+    State(state): State<AppState>,
+) -> IndigoResult<Json<Vec<serde_json::Value>>> {
+    let rows = sqlx::query!(
+    "SELECT email, full_name, is_confirmed, subscribed_at
+     FROM newsletter_subscribers
+     WHERE unsubscribed_at IS NULL
+     ORDER BY subscribed_at DESC"
+)
+.fetch_all(&state.db)
+.await?;
+
+let subs: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
+    "email":        r.email,
+    "full_name":    r.full_name,
+    "is_confirmed": r.is_confirmed,
+    "subscribed_at": r.subscribed_at,
+})).collect();
+    Ok(Json(subs))
 }

@@ -221,3 +221,25 @@ pub fn newsletter_confirm_email(name: &str, confirm_link: &str) -> String {
     "#, name=name, btn=btn(confirm_link, "Confirm Subscription"));
     base_template("Confirm your Indigo newsletter", &content)
 }
+
+pub fn newsletter_broadcast_email(
+    name:         &str,
+    subject:      &str,
+    content:      &str,
+    frontend_url: &str,
+) -> String {
+    let content_html = content.replace('\n', "<br>");
+    let inner = format!(r#"
+      <h1 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#0f172a">{subject}</h1>
+      <p style="margin:0 0 24px;font-size:14px;color:#94a3b8">Hi {name},</p>
+      <div style="font-size:15px;color:#374151;line-height:1.8;margin-bottom:32px">
+        {content_html}
+      </div>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin-bottom:24px">
+      <p style="font-size:13px;color:#94a3b8;margin:0">
+        You are receiving this because you subscribed to the Indigo newsletter.
+        <a href="{frontend_url}/blog" style="color:#4f46e5">Visit our blog</a>
+      </p>
+    "#, subject=subject, name=name, content_html=content_html, frontend_url=frontend_url);
+    base_template(subject, &inner)
+}
