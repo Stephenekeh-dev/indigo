@@ -17,5 +17,7 @@ pub fn routes(state: AppState) -> Router {
             get(get_course)
             .put(update_course)
             .delete(delete_course))
+         .route("/:course_id/lessons",
+            get(list_lessons).post(upload_lesson_video))
         .with_state(state)
 }

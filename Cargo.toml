@@ -32,6 +32,10 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 slug = "0.1"
 lettre = { version = "0.11", features = ["tokio1", "tokio1-native-tls"] }
+aws-config          = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-s3          = { version = "1" }
+aws-credential-types = { version = "1" }
+aws-smithy-http     = { version = "0.60" }
 
 [dev-dependencies]
 tokio-test = "0.4"

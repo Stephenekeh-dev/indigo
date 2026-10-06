@@ -1,6 +1,7 @@
 use axum::{extract::{State, Path, Query}, Json};
 use serde::Deserialize;
 use uuid::Uuid;
+use axum::extract::Multipart;
 use crate::{
     state::AppState,
     errors::{IndigoError, IndigoResult},
@@ -254,4 +255,116 @@ pub async fn delete_course(
     .execute(&state.db)
     .await?;
     Ok(Json(serde_json::json!({ "message": "Course deleted" })))
+}
+
+pub async fn upload_lesson_video(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path(course_id): Path<String>,
+    mut multipart: Multipart,
+) -> IndigoResult<Json<serde_json::Value>> {
+    let mut file_bytes    = Vec::new();
+    let mut original_name = String::from("lesson.mp4");
+    let mut lesson_title  = String::from("New Lesson");
+    let mut lesson_order  = 1i32;
+
+    while let Some(field) = multipart.next_field().await
+        .map_err(|e| IndigoError::Internal(anyhow::anyhow!("Multipart error: {}", e)))?
+    {
+        let name = field.name().unwrap_or("").to_owned();
+        match name.as_str() {
+            "video" => {
+                original_name = field.file_name()
+                    .unwrap_or("lesson.mp4")
+                    .to_owned();
+                file_bytes = field.bytes().await
+                    .map_err(|e| IndigoError::Internal(anyhow::anyhow!("{}", e)))?
+                    .to_vec();
+            }
+            "title" => {
+                lesson_title = field.text().await
+                    .map_err(|e| IndigoError::Internal(anyhow::anyhow!("{}", e)))?;
+            }
+            "sort_order" => {
+                lesson_order = field.text().await
+                    .unwrap_or_else(|_| "1".into())
+                    .parse()
+                    .unwrap_or(1);
+            }
+            _ => {}
+        }
+    }
+
+    if file_bytes.is_empty() {
+        return Err(IndigoError::Validation("No video file provided".into()));
+    }
+
+    let r2_cfg = crate::utils::storage::R2Config {
+        account_id:        state.config.r2_account_id.clone(),
+        access_key_id:     state.config.r2_access_key_id.clone(),
+        secret_access_key: state.config.r2_secret_access_key.clone(),
+        bucket_name:       state.config.r2_bucket_name.clone(),
+        public_url:        state.config.r2_public_url.clone(),
+    };
+
+    let video_url = crate::utils::storage::upload_video(
+        &r2_cfg,
+        file_bytes,
+        &original_name,
+        &course_id,
+    ).await?;
+
+    // Save lesson to DB
+    let lesson_id = uuid::Uuid::new_v4();
+    sqlx::query!(
+    r#"INSERT INTO lessons
+          (id, course_id, title, sort_order, video_url, video_duration)
+       VALUES ($1, $2::uuid, $3, $4, $5, 0)"#,
+    lesson_id,
+    course_id.parse::<uuid::Uuid>()
+        .map_err(|_| IndigoError::Validation("Invalid course ID".into()))?,
+    lesson_title,
+    lesson_order,
+    video_url
+)
+.execute(&state.db)
+.await?;
+    // Update course lesson count
+    sqlx::query!(
+    "UPDATE courses SET total_lessons = total_lessons + 1 WHERE id = $1::uuid",
+    course_id.parse::<uuid::Uuid>().unwrap()
+)
+.execute(&state.db)
+.await.ok();
+
+    Ok(Json(serde_json::json!({
+        "message":   "Lesson uploaded successfully",
+        "video_url": video_url,
+        "lesson_id": lesson_id,
+    })))
+}
+
+pub async fn list_lessons(
+    State(state): State<AppState>,
+    Path(course_id): Path<String>,
+) -> IndigoResult<Json<Vec<serde_json::Value>>> {
+    let rows = sqlx::query!(
+    r#"SELECT id, title, sort_order, video_url, video_duration, created_at
+       FROM lessons
+       WHERE course_id = $1::uuid
+       ORDER BY sort_order ASC"#,
+    course_id.parse::<uuid::Uuid>()
+        .map_err(|_| IndigoError::Validation("Invalid course ID".into()))?
+)
+.fetch_all(&state.db)
+.await?;
+
+let lessons: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
+    "id":             r.id,
+    "title":          r.title,
+    "sort_order":     r.sort_order,
+    "video_url":      r.video_url,
+    "video_duration": r.video_duration,
+})).collect();
+    Ok(Json(lessons))
 }
