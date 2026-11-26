@@ -18,6 +18,12 @@ pub fn routes(state: AppState) -> Router {
             .put(update_course)
             .delete(delete_course))
          .route("/:course_id/lessons",
-            get(list_lessons).post(upload_lesson_video))
+            get(list_lessons)
+            .post(upload_lesson_video))
+         .route("/:course_id/lessons/:lesson_id",
+    delete(delete_lesson))
+         .route("/:course_id/lessons/:lesson_id/video",
+    delete(remove_lesson_video))
+        .layer(axum::extract::DefaultBodyLimit::max(500 * 1024 * 1024))
         .with_state(state)
 }

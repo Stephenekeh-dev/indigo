@@ -315,15 +315,18 @@ pub async fn upload_lesson_video(
     ).await?;
 
     // Save lesson to DB
-    let lesson_id = uuid::Uuid::new_v4();
-    sqlx::query!(
+    let lesson_id   = uuid::Uuid::new_v4();
+let lesson_slug = crate::utils::slug::unique_slug(&lesson_title, &lesson_id);
+
+sqlx::query!(
     r#"INSERT INTO lessons
-          (id, course_id, title, sort_order, video_url, video_duration)
-       VALUES ($1, $2::uuid, $3, $4, $5, 0)"#,
+          (id, course_id, title, slug, sort_order, video_url, video_duration)
+       VALUES ($1, $2::uuid, $3, $4, $5, $6, 0)"#,
     lesson_id,
     course_id.parse::<uuid::Uuid>()
         .map_err(|_| IndigoError::Validation("Invalid course ID".into()))?,
     lesson_title,
+    lesson_slug,
     lesson_order,
     video_url
 )
@@ -367,4 +370,84 @@ let lessons: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
     "video_duration": r.video_duration,
 })).collect();
     Ok(Json(lessons))
+}
+
+fn r2_cfg(state: &AppState) -> crate::utils::storage::R2Config {
+    crate::utils::storage::R2Config {
+        account_id:        state.config.r2_account_id.clone(),
+        access_key_id:     state.config.r2_access_key_id.clone(),
+        secret_access_key: state.config.r2_secret_access_key.clone(),
+        bucket_name:       state.config.r2_bucket_name.clone(),
+        public_url:        state.config.r2_public_url.clone(),
+    }
+}
+
+pub async fn delete_lesson(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path((course_id, lesson_id)): Path<(String, String)>,
+) -> IndigoResult<Json<serde_json::Value>> {
+    let course_uuid = course_id.parse::<uuid::Uuid>()
+        .map_err(|_| IndigoError::Validation("Invalid course ID".into()))?;
+    let lesson_uuid = lesson_id.parse::<uuid::Uuid>()
+        .map_err(|_| IndigoError::Validation("Invalid lesson ID".into()))?;
+
+    let row = sqlx::query!(
+        "DELETE FROM lessons WHERE id = $1 AND course_id = $2 RETURNING video_url",
+        lesson_uuid, course_uuid
+    )
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| IndigoError::NotFound("Lesson".into()))?;
+
+    // Best effort: a failed R2 delete should not undo the DB delete
+    if let Some(url) = row.video_url {
+        if let Err(e) = crate::utils::storage::delete_by_url(&r2_cfg(&state), &url).await {
+            tracing::error!("Lesson deleted but R2 cleanup failed: {:?}", e);
+        }
+    }
+
+    sqlx::query!(
+        "UPDATE courses SET total_lessons = GREATEST(total_lessons - 1, 0) WHERE id = $1",
+        course_uuid
+    )
+    .execute(&state.db)
+    .await.ok();
+
+    Ok(Json(serde_json::json!({ "message": "Lesson deleted" })))
+}
+
+pub async fn remove_lesson_video(
+    _claims: Claims,
+    State(state): State<AppState>,
+    Path((course_id, lesson_id)): Path<(String, String)>,
+) -> IndigoResult<Json<serde_json::Value>> {
+    let course_uuid = course_id.parse::<uuid::Uuid>()
+        .map_err(|_| IndigoError::Validation("Invalid course ID".into()))?;
+    let lesson_uuid = lesson_id.parse::<uuid::Uuid>()
+        .map_err(|_| IndigoError::Validation("Invalid lesson ID".into()))?;
+
+    let row = sqlx::query!(
+        "SELECT video_url FROM lessons WHERE id = $1 AND course_id = $2",
+        lesson_uuid, course_uuid
+    )
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| IndigoError::NotFound("Lesson".into()))?;
+
+    sqlx::query!(
+        "UPDATE lessons SET video_url = NULL, video_duration = 0, updated_at = NOW()
+         WHERE id = $1 AND course_id = $2",
+        lesson_uuid, course_uuid
+    )
+    .execute(&state.db)
+    .await?;
+
+    if let Some(url) = row.video_url {
+        if let Err(e) = crate::utils::storage::delete_by_url(&r2_cfg(&state), &url).await {
+            tracing::error!("Video removed but R2 cleanup failed: {:?}", e);
+        }
+    }
+
+    Ok(Json(serde_json::json!({ "message": "Video removed" })))
 }

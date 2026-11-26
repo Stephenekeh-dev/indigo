@@ -1,6 +1,6 @@
 use aws_sdk_s3::{
     Client,
-    config::{Builder, Credentials, Region},
+    config::{ BehaviorVersion, Builder, Credentials, Region},
     primitives::ByteStream,
 };
 use uuid::Uuid;
@@ -25,6 +25,7 @@ fn make_client(cfg: &R2Config) -> Client {
         cfg.account_id
     );
     let s3_cfg = Builder::new()
+        .behavior_version(BehaviorVersion::latest())
         .endpoint_url(endpoint)
         .credentials_provider(creds)
         .region(Region::new("auto"))
@@ -97,4 +98,22 @@ pub async fn upload_image(
         ))?;
 
     Ok(format!("{}/{}", cfg.public_url.trim_end_matches('/'), key))
+}
+
+pub async fn delete_by_url(cfg: &R2Config, url: &str) -> Result<(), IndigoError> {
+    let prefix = format!("{}/", cfg.public_url.trim_end_matches('/'));
+    let key = url.strip_prefix(&prefix).ok_or_else(|| {
+        IndigoError::Internal(anyhow::anyhow!("URL is not in this bucket: {}", url))
+    })?;
+
+    make_client(cfg)
+        .delete_object()
+        .bucket(&cfg.bucket_name)
+        .key(key)
+        .send()
+        .await
+        .map_err(|e| IndigoError::Internal(anyhow::anyhow!("R2 delete failed: {}", e)))?;
+
+    tracing::info!("Deleted from R2: {}", key);
+    Ok(())
 }
